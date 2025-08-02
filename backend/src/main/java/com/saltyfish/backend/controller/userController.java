@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Slf4j
 @RestController
-@RequestMapping("/user")
+@RequestMapping("")
 @Tag(name = "用户接口")
 public class userController {
 
@@ -52,7 +52,6 @@ public class userController {
         UserLoginVO userLoginVO = UserLoginVO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
-                .account(user.getAccount())
                 .token(token).build();
         return Result.success(userLoginVO);
     }
