@@ -1,0 +1,21 @@
+# 忽略所有目标文件夹
+**/target/
+**/.vscode/
+
+# 忽略 IDE 配置文件和目录
+.idea
+
+
+# 忽略 IntelliJ IDEA 项目文件
+*.iml
+
+# 忽略编译生成的类文件
+*.class
+
+# 忽略以 Test.java 结尾的测试文件
+*Test.java
+
+# 忽略所有测试文件夹
+**/test/
+
+application-dev.yml

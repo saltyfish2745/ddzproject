@@ -1,0 +1,74 @@
+server:
+  port: 8080
+
+spring:
+  output:
+    ansi:
+      # 控制台输出是否使用ANSI颜色
+      enabled: ALWAYS
+  profiles:
+    active: dev
+  datasource:
+    # 数据库连接信息
+    url: ${ddzproject.datasource.url}
+    username: ${ddzproject.datasource.username}
+    password: ${ddzproject.datasource.password}
+    driver-class-name: ${ddzproject.datasource.driver-class-name}
+  data:
+    # Redis连接信息
+    redis:
+      host: ${ddzproject.data.redis.host}
+      port: ${ddzproject.data.redis.port}
+      password: ${ddzproject.data.redis.password}
+      database: ${ddzproject.data.redis.database}
+  mail:
+    # 邮箱配置
+    host: ${ddzproject.email.host} # 邮箱服务器地址
+    port: ${ddzproject.email.port} # 邮箱服务器端口
+    username: ${ddzproject.email.username} # 邮箱用户名
+    password: ${ddzproject.email.password} # 邮箱授权码
+    protocol: ${ddzproject.email.protocol}
+    properties:
+      mail:
+        debug: true # 开启debug模式，可以在console看到详细的发送日志
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            enable: true
+            protocol: TLSv1.2 # linux mail protocol
+
+# springdoc-openapi项目配置
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: "default"
+      paths-to-match: "/**"
+      packages-to-scan: com.xiaominfo.knife4j.demo.web
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.saltyfish.backend
+  configuration:
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com:
+      saltyfish:
+        mapper: DEBUG
+        server: info
+        controller: info
+
+backend:
+  jwt:
+    secret-key: saltyfish-developing-secret-key-123456789
+    expiration: 2592000000 # 7 days in seconds
+    token-name: token
