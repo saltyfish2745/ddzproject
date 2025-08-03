@@ -81,7 +81,7 @@ public class GameRoom {
     private PlayerOperationInfo previousNotPassedPlayerOperationInfo; // 上个未pass的玩家的操作信息
     private Session currentPlayer;// 当前玩家session
     private String currentRoundType = CURRENT_ROUND_TYPE_1;// 当前轮次类型
-    private Integer landloadPlayerId;// 地主玩家id
+    private Integer landlordPlayerId;// 地主玩家id
     private Integer gameMultiplier = 1;// 游戏倍数
 
     // 构造方法
@@ -214,7 +214,7 @@ public class GameRoom {
             msg.put("currentPlayerId", currentPlayer.getUserProperties().get("playerId"));// 当前操作玩家的id
             msg.put("playerTurnTimeCountdown", PLAYER_TURNTIME_COUNTDOWN);// 玩家每回合的计时器，单位秒
             msg.put("previousPlayerOperationInfoVO", previousPlayerOperationInfoVO); // 上一个玩家操作信息
-            msg.put("landloadPlayerId", landloadPlayerId); // 地主玩家id
+            msg.put("landlordPlayerId", landlordPlayerId); // 地主玩家id
             msg.put("gameMultiplier", gameMultiplier); // 游戏倍率
             p.getAsyncRemote().sendText(msg.toJSONString());
         });
@@ -298,17 +298,17 @@ public class GameRoom {
             previousPlayerOperationInfoVO.setCall(playerOperationInfoDTO.getCall());
             previousPlayerOperationInfoVO.setPlayerId(playerOperationInfoDTO.getPlayerId());
             // 判断是否有地主
-            if (landloadPlayerId != null) {
-                log.info("地主玩家id为：" + landloadPlayerId);
+            if (landlordPlayerId != null) {
+                log.info("地主玩家id为：" + landlordPlayerId);
                 // 有地主了，进入出牌阶段
                 currentRoundType = CURRENT_ROUND_TYPE_2;
                 previousNotPassedPlayerOperationInfo = new PlayerOperationInfo();
-                previousNotPassedPlayerOperationInfo.setPlayerId(landloadPlayerId);
+                previousNotPassedPlayerOperationInfo.setPlayerId(landlordPlayerId);
                 // 为地主加三张牌
-                List<Card> landlordCards = new ArrayList<>(hands.get(players.get(landloadPlayerId)));
+                List<Card> landlordCards = new ArrayList<>(hands.get(players.get(landlordPlayerId)));
                 landlordCards.addAll(publicCards);
                 landlordCards.sort(Comparator.comparingInt(Card::getIndex));// 手牌排序根据牌的index
-                hands.put(players.get(landloadPlayerId), landlordCards);// 放入hands中
+                hands.put(players.get(landlordPlayerId), landlordCards);// 放入hands中
                 gameCallLandlordRuler = null;// 清空叫地主逻辑器
             }
         } else if (currentRoundType.equals(CURRENT_ROUND_TYPE_2)) {
@@ -364,7 +364,7 @@ public class GameRoom {
 
         Long bean = BASIC_BEAN * gameMultiplier;
 
-        if (WinnerId == landloadPlayerId) {
+        if (WinnerId == landlordPlayerId) {
             // 地主获胜
             // 给地主加豆子
             userMapper.updatePlusBeanCount(WinnerUserId, bean * 2);
@@ -405,9 +405,9 @@ public class GameRoom {
             });
         } else {
             // 农民获胜
-            Integer loserPlayerId = landloadPlayerId;
-            Long loserUserId = usersId.get(players.get(landloadPlayerId));
-            Session loserSession = players.get(landloadPlayerId);
+            Integer loserPlayerId = landlordPlayerId;
+            Long loserUserId = usersId.get(players.get(landlordPlayerId));
+            Session loserSession = players.get(landlordPlayerId);
             // 给地主扣除豆子
             userMapper.updatePlusBeanCount(loserUserId, -(bean * 2));
             Long currentBean = userMapper.selectBeanCountById(loserUserId);
@@ -492,13 +492,13 @@ class GameCallLandlordRuler {
             gameRoom.setGameMultiplier(gameRoom.getGameMultiplier() * 2);// 有玩家叫地主,游戏倍率翻倍
             // 如果叫牌玩家有两位，则当前玩家为地主
             if (bannedCallers.size() == gameRoom.getPlayers().size() - 1) {
-                gameRoom.setLandloadPlayerId((int) player.getUserProperties().get("playerId"));// 设置地主玩家id
+                gameRoom.setLandlordPlayerId((int) player.getUserProperties().get("playerId"));// 设置地主玩家id
                 return;
             }
 
             // 如果第一个叫地主玩家为自己着，则设置地主玩家id
             if (theFirestCaller == player) {
-                gameRoom.setLandloadPlayerId((int) player.getUserProperties().get("playerId"));// 设置地主玩家id
+                gameRoom.setLandlordPlayerId((int) player.getUserProperties().get("playerId"));// 设置地主玩家id
                 return;
             }
             // 设置第一个叫地主的玩家
@@ -519,7 +519,7 @@ class GameCallLandlordRuler {
             }
             // 当第一个叫牌玩家为当前玩家且不叫地主，设置上个叫牌玩家为地主和当前玩家为地主玩家
             if (theFirestCaller == player) {
-                gameRoom.setLandloadPlayerId((int) thePreviousCaller.getUserProperties().get("playerId"));// 设置地主玩家id
+                gameRoom.setLandlordPlayerId((int) thePreviousCaller.getUserProperties().get("playerId"));// 设置地主玩家id
                 gameRoom.setCurrentPlayer(thePreviousCaller);
                 return;
             }
@@ -527,7 +527,7 @@ class GameCallLandlordRuler {
             if (bannedCallers.size() == gameRoom.getPlayers().size() - 1) {
                 // 有两位玩家不叫地主,判断是否有一位玩家叫了地主,是则设置地主玩家id,否则设置下一位玩家为当前玩家
                 if (thePreviousCaller != null) {
-                    gameRoom.setLandloadPlayerId((int) thePreviousCaller.getUserProperties().get("playerId"));// 设置地主玩家id
+                    gameRoom.setLandlordPlayerId((int) thePreviousCaller.getUserProperties().get("playerId"));// 设置地主玩家id
                     gameRoom.setCurrentPlayer(thePreviousCaller);
                     return;
                 }
