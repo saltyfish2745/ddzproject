@@ -50,8 +50,6 @@ public class userController {
         String token = JwtUtil.createJWT(jwtProperties.getSecretKey(), jwtProperties.getExpiration(), claims);
         // 返回token
         UserLoginVO userLoginVO = UserLoginVO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
                 .token(token).build();
         return Result.success(userLoginVO);
     }
