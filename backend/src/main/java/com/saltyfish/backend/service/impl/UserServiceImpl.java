@@ -118,6 +118,13 @@ public class UserServiceImpl implements UserService {
                 .currentBean(user2.getBeanCount()).createTime(LocalDateTime.now()).build());
     }
 
+    // 检查账号是否存在// 存在返回true，不存在返回false
+    @Override
+    public boolean isAccountExist(String account) {
+        User user = userMapper.selectByAccount(account);
+        return user != null ? true : false;
+    }
+
     // 申请邮箱验证码操作
     @Override
     public void applyForEmailcode(String email) {
@@ -186,4 +193,5 @@ public class UserServiceImpl implements UserService {
         User user = userMapper.selectById(userId);
         return user.getBeanCount();
     }
+
 }

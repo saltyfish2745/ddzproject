@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.saltyfish.backend.constant.DatabaseConstant;
 import com.saltyfish.backend.constant.JwtClaimsConstant;
+import com.saltyfish.backend.constant.MessageConstant;
 import com.saltyfish.backend.pojo.dto.UserDTO;
 import com.saltyfish.backend.pojo.dto.UserLoginDTO;
 import com.saltyfish.backend.pojo.entity.User;
@@ -67,6 +68,15 @@ public class userController {
         BeanUtils.copyProperties(userDTO, userLoginDTO);
         return login(userLoginDTO);
 
+    }
+
+    @GetMapping("/isAccountExist")
+    @Operation(summary = "检查账号是否存在", description = "检查账号是否存在接口")
+    public Result<Boolean> isAccountExist(@RequestParam String account) {
+        log.info("检查账号是否存在: " + account);
+        boolean exists = userService.isAccountExist(account);
+        // 存在返回true，不存在返回false
+        return Result.success(exists, exists? MessageConstant.ACCOUNT_EXISTS:MessageConstant.ACCOUNT_NOT_FOUND);
     }
 
     @GetMapping("/applyForEmailcode")
