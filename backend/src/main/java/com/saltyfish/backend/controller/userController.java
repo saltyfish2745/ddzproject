@@ -3,6 +3,7 @@ package com.saltyfish.backend.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.saltyfish.backend.constant.DatabaseConstant;
 import com.saltyfish.backend.constant.JwtClaimsConstant;
 import com.saltyfish.backend.pojo.dto.UserDTO;
 import com.saltyfish.backend.pojo.dto.UserLoginDTO;
@@ -73,7 +74,7 @@ public class userController {
     public Result applyForEmailcode(@RequestParam String email) {
         log.info("申请邮箱验证码: " + email);
         userService.applyForEmailcode(email);
-        return Result.success();
+        return Result.success(DatabaseConstant.EMAILCODE_COUNTDOWN);
     }
 
     @GetMapping("/clockIn")

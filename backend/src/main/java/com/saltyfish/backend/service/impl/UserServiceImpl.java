@@ -137,7 +137,7 @@ public class UserServiceImpl implements UserService {
         sendEmailcode(email, emailcode);
         // 先发送邮件，再保存到redis防止邮箱错误还存入redis
         // 30秒定时保存邮箱验证码到redis后续与注册接口进行验证
-        redisTemplate.opsForValue().set(email, emailcode, 30, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(email, emailcode, DatabaseConstant.EMAILCODE_COUNTDOWN, TimeUnit.SECONDS);
     }
 
     // 用异步的方式发送邮件提高效率
