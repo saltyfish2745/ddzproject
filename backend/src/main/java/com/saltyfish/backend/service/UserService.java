@@ -3,6 +3,7 @@ package com.saltyfish.backend.service;
 import com.saltyfish.backend.pojo.dto.UserDTO;
 import com.saltyfish.backend.pojo.dto.UserLoginDTO;
 import com.saltyfish.backend.pojo.entity.User;
+import com.saltyfish.backend.pojo.vo.UserInfo;
 
 public interface UserService {
 
@@ -23,5 +24,8 @@ public interface UserService {
 
     // 用户密码找回
     void retrieve(UserDTO userDTO, String emailcode);
+
+    // 查看用户信息
+    UserInfo viewUserInfo();
 
 }

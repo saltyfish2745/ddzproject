@@ -28,6 +28,7 @@ import com.saltyfish.backend.pojo.dto.UserDTO;
 import com.saltyfish.backend.pojo.dto.UserLoginDTO;
 import com.saltyfish.backend.pojo.entity.BeanHistory;
 import com.saltyfish.backend.pojo.entity.User;
+import com.saltyfish.backend.pojo.vo.UserInfo;
 import com.saltyfish.backend.properties.EmailProperties;
 import com.saltyfish.backend.service.UserService;
 
@@ -219,5 +220,16 @@ public class UserServiceImpl implements UserService {
                 .currentBean(user.getBeanCount() + GameConstant.LOGIN_BEAN).createTime(LocalDateTime.now()).build());
     }
 
+    // 查看用户信息
+    @Override
+    public UserInfo viewUserInfo() {
+        Long userId = BaseContext.getCurrentId();
+        // 根据用户ID查询用户信息
+        User user = userMapper.selectById(userId);
+        // 复制user对象到UserInfo对象
+        UserInfo userInfo = new UserInfo();
+        BeanUtils.copyProperties(user, userInfo);
+        return userInfo;
+    }
 
 }

@@ -9,6 +9,7 @@ import com.saltyfish.backend.constant.MessageConstant;
 import com.saltyfish.backend.pojo.dto.UserDTO;
 import com.saltyfish.backend.pojo.dto.UserLoginDTO;
 import com.saltyfish.backend.pojo.entity.User;
+import com.saltyfish.backend.pojo.vo.UserInfo;
 import com.saltyfish.backend.pojo.vo.UserLoginVO;
 import com.saltyfish.backend.properties.JwtProperties;
 import com.saltyfish.backend.result.Result;
@@ -105,5 +106,13 @@ public class userController {
         return Result.success("签到成功");
     }
 
+    @GetMapping("/viewUserInfo")
+    @Operation(summary = "查看用户信息", description = "查看用户信息接口")
+    public Result<UserInfo> viewUserInfo() {
+        log.info("查看用户信息");
+        UserInfo userInfo = userService.viewUserInfo();
+        return Result.success(userInfo);
+    }
+    
 
 }
