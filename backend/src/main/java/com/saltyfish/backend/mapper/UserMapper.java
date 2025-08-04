@@ -5,7 +5,10 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import com.github.pagehelper.Page;
+import com.saltyfish.backend.pojo.entity.BeanHistory;
 import com.saltyfish.backend.pojo.entity.User;
+import com.saltyfish.backend.pojo.vo.BeanHistoryVO;
 
 @Mapper
 public interface UserMapper {
@@ -33,5 +36,7 @@ public interface UserMapper {
     // 更新用户信息
     @Update("UPDATE user SET username = #{username}, account = #{account}, password = #{password}, email = #{email} WHERE id = #{id}")
     public void updateById(User user);
+
+    public Page<BeanHistoryVO> pageBeanHistoryByUserId(Long userId, Integer page, Integer pageSize);
 
 }

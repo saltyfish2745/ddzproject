@@ -16,6 +16,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.saltyfish.backend.constant.DatabaseConstant;
 import com.saltyfish.backend.constant.GameConstant;
 import com.saltyfish.backend.constant.MessageConstant;
@@ -28,8 +30,10 @@ import com.saltyfish.backend.pojo.dto.UserDTO;
 import com.saltyfish.backend.pojo.dto.UserLoginDTO;
 import com.saltyfish.backend.pojo.entity.BeanHistory;
 import com.saltyfish.backend.pojo.entity.User;
+import com.saltyfish.backend.pojo.vo.BeanHistoryVO;
 import com.saltyfish.backend.pojo.vo.UserInfo;
 import com.saltyfish.backend.properties.EmailProperties;
+import com.saltyfish.backend.result.PageResult;
 import com.saltyfish.backend.service.UserService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -230,6 +234,15 @@ public class UserServiceImpl implements UserService {
         UserInfo userInfo = new UserInfo();
         BeanUtils.copyProperties(user, userInfo);
         return userInfo;
+    }
+
+    // 分页查看用户豆币历史
+    @Override
+    public PageResult pageBeanHistory(Integer page, Integer pageSize) {
+        Long userId = BaseContext.getCurrentId();
+        PageHelper.startPage(page, pageSize);
+        Page<BeanHistoryVO> pageResult = userMapper.pageBeanHistoryByUserId(userId, page, pageSize);
+        return PageResult.builder().records(pageResult.getResult()).total(pageResult.getTotal()).build();
     }
 
 }

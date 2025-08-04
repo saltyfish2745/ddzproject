@@ -12,6 +12,7 @@ import com.saltyfish.backend.pojo.entity.User;
 import com.saltyfish.backend.pojo.vo.UserInfo;
 import com.saltyfish.backend.pojo.vo.UserLoginVO;
 import com.saltyfish.backend.properties.JwtProperties;
+import com.saltyfish.backend.result.PageResult;
 import com.saltyfish.backend.result.Result;
 import com.saltyfish.backend.service.UserService;
 import com.saltyfish.backend.utils.JwtUtil;
@@ -112,6 +113,14 @@ public class userController {
         log.info("查看用户信息");
         UserInfo userInfo = userService.viewUserInfo();
         return Result.success(userInfo);
+    }
+    
+    @GetMapping("/pageBeanHistory")
+    @Operation(summary = "分页查看用户豆币历史", description = "分页查看用户豆币历史接口")
+    public Result<PageResult> pageBeanHistory(@RequestParam Integer page, @RequestParam Integer pageSize) {
+        log.info("分页查看用户豆币历史: page=" + page + ", pageSize=" + pageSize);
+        PageResult pageResult = userService.pageBeanHistory(page, pageSize);
+        return Result.success(pageResult);
     }
     
 

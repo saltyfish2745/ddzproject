@@ -4,6 +4,7 @@ import com.saltyfish.backend.pojo.dto.UserDTO;
 import com.saltyfish.backend.pojo.dto.UserLoginDTO;
 import com.saltyfish.backend.pojo.entity.User;
 import com.saltyfish.backend.pojo.vo.UserInfo;
+import com.saltyfish.backend.result.PageResult;
 
 public interface UserService {
 
@@ -27,5 +28,8 @@ public interface UserService {
 
     // 查看用户信息
     UserInfo viewUserInfo();
+
+    // 分页查看用户豆币历史
+    PageResult pageBeanHistory(Integer page, Integer pageSize);
 
 }
