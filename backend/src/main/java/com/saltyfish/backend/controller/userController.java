@@ -105,12 +105,5 @@ public class userController {
         return Result.success("签到成功");
     }
 
-    @GetMapping("/viewBean")
-    @Operation(summary = "查看bean", description = "查看bean接口")
-    public Result<Long> viewBean() {
-        log.info("查看bean");
-        Long beanCount = userService.viewBean();
-        return Result.success(beanCount);
-    }
 
 }

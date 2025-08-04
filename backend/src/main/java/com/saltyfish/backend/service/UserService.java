@@ -18,9 +18,6 @@ public interface UserService {
     // 签到操作
     void clockIn();
 
-    // 查看bean操作
-    Long viewBean();
-
     // 检查账号是否存在// 存在返回true，不存在返回false
     boolean isAccountExist(String account);
 

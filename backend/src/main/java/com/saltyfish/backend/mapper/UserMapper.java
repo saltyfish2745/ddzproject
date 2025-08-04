@@ -26,10 +26,6 @@ public interface UserMapper {
     @Update("UPDATE user SET bean_count = bean_count + (#{beanCount}) WHERE id = #{userId}")
     public void updatePlusBeanCount(Long userId, Long beanCount);
 
-    // 根据用户id查询豆数量
-    @Select("SELECT bean_count FROM user WHERE id = #{userId}")
-    public Long selectBeanCountById(Long userId);
-
     // 更新用户信息
     @Update("UPDATE user SET username = #{username}, account = #{account}, password = #{password}, email = #{email} WHERE id = #{id}")
     public void updateById(User user);

@@ -219,14 +219,5 @@ public class UserServiceImpl implements UserService {
                 .currentBean(user.getBeanCount() + GameConstant.LOGIN_BEAN).createTime(LocalDateTime.now()).build());
     }
 
-    // 查看bean操作
-    @Override
-    public Long viewBean() {
-        // 通过线程变量获取当前用户ID
-        Long userId = BaseContext.getCurrentId();
-        // 查询数据库中用户的bean数量
-        User user = userMapper.selectById(userId);
-        return user.getBeanCount();
-    }
 
 }
