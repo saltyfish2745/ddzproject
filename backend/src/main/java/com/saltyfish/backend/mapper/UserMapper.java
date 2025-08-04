@@ -1,5 +1,7 @@
 package com.saltyfish.backend.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
@@ -37,6 +39,6 @@ public interface UserMapper {
     @Update("UPDATE user SET username = #{username}, account = #{account}, password = #{password}, email = #{email} WHERE id = #{id}")
     public void updateById(User user);
 
-    public Page<BeanHistoryVO> pageBeanHistoryByUserId(Long userId, Integer page, Integer pageSize);
+    public List<BeanHistoryVO> pageBeanHistoryByUserId(Long userId, Integer page, Integer pageSize);
 
 }

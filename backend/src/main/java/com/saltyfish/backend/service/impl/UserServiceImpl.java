@@ -2,6 +2,7 @@ package com.saltyfish.backend.service.impl;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,6 +19,7 @@ import org.springframework.util.DigestUtils;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import com.saltyfish.backend.constant.DatabaseConstant;
 import com.saltyfish.backend.constant.GameConstant;
 import com.saltyfish.backend.constant.MessageConstant;
@@ -238,11 +240,11 @@ public class UserServiceImpl implements UserService {
 
     // 分页查看用户豆币历史
     @Override
-    public PageResult pageBeanHistory(Integer page, Integer pageSize) {
+    public PageInfo<BeanHistoryVO> pageBeanHistory(int page, int pageSize) {
         Long userId = BaseContext.getCurrentId();
         PageHelper.startPage(page, pageSize);
-        Page<BeanHistoryVO> pageResult = userMapper.pageBeanHistoryByUserId(userId, page, pageSize);
-        return PageResult.builder().records(pageResult.getResult()).total(pageResult.getTotal()).build();
+        List<BeanHistoryVO> pageResult = userMapper.pageBeanHistoryByUserId(userId, page, pageSize);
+        return new PageInfo<>(pageResult);
     }
 
 }

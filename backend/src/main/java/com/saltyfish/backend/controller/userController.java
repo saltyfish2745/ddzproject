@@ -3,12 +3,14 @@ package com.saltyfish.backend.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.pagehelper.PageInfo;
 import com.saltyfish.backend.constant.DatabaseConstant;
 import com.saltyfish.backend.constant.JwtClaimsConstant;
 import com.saltyfish.backend.constant.MessageConstant;
 import com.saltyfish.backend.pojo.dto.UserDTO;
 import com.saltyfish.backend.pojo.dto.UserLoginDTO;
 import com.saltyfish.backend.pojo.entity.User;
+import com.saltyfish.backend.pojo.vo.BeanHistoryVO;
 import com.saltyfish.backend.pojo.vo.UserInfo;
 import com.saltyfish.backend.pojo.vo.UserLoginVO;
 import com.saltyfish.backend.properties.JwtProperties;
@@ -114,14 +116,14 @@ public class userController {
         UserInfo userInfo = userService.viewUserInfo();
         return Result.success(userInfo);
     }
-    
+
     @GetMapping("/pageBeanHistory")
     @Operation(summary = "分页查看用户豆币历史", description = "分页查看用户豆币历史接口")
-    public Result<PageResult> pageBeanHistory(@RequestParam Integer page, @RequestParam Integer pageSize) {
+    public Result<PageInfo<BeanHistoryVO>> pageBeanHistory(@RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
         log.info("分页查看用户豆币历史: page=" + page + ", pageSize=" + pageSize);
-        PageResult pageResult = userService.pageBeanHistory(page, pageSize);
+        PageInfo<BeanHistoryVO> pageResult = userService.pageBeanHistory(page, pageSize);
         return Result.success(pageResult);
     }
-    
 
 }
