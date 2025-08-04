@@ -125,6 +125,41 @@ public class UserServiceImpl implements UserService {
         return user != null ? true : false;
     }
 
+    // 用户密码找回
+    @Override
+    public void retrieve(UserDTO userDTO, String emailcode) {
+        // 判断用户名账号或密码长度是否超过限制
+        if (userDTO.getAccount().length() > DatabaseConstant.ACCOUNT_LENGTH
+                || userDTO.getPassword().length() > DatabaseConstant.PASSWORD_LENGTH) {
+            // 账号或密码长度超过限制抛出异常
+            throw new BaseException(MessageConstant.UNKNOWN_ERROR);
+        }
+        // 根据账号查询数据库中的数据
+        User user = userMapper.selectByAccount(userDTO.getAccount());
+        // 判断账号是否存在
+        if (user == null) {
+            // 账号不存在抛出异常
+            throw new AccountNotFoundException(MessageConstant.ACCOUNT_NOT_FOUND);
+        }
+        // 判断邮箱是否正确
+        if (user.getEmail() == null || !user.getEmail().equals(userDTO.getEmail())) {
+            // 邮箱不正确抛出异常
+            throw new BaseException(MessageConstant.ACCOUNT_NOT_FOUND);
+        }
+        // 判断是否有邮箱
+        if (userDTO.getEmail() != null) {
+            // 判断验证码是否正确
+            String emailcodeFromRedis = (String) redisTemplate.opsForValue().get(userDTO.getEmail());
+            if (emailcodeFromRedis == null || !emailcodeFromRedis.equals(emailcode)) {
+                // 验证码错误抛出异常
+                throw new BaseException(MessageConstant.VERIFICATION_CODE_ERROR);
+            }
+        }
+        // 更新密码
+        user.setPassword(DigestUtils.md5DigestAsHex(userDTO.getPassword().getBytes()));
+        userMapper.updateById(user);
+    }
+
     // 申请邮箱验证码操作
     @Override
     public void applyForEmailcode(String email) {

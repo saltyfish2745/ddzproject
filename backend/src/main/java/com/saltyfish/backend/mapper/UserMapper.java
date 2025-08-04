@@ -30,4 +30,8 @@ public interface UserMapper {
     @Select("SELECT bean_count FROM user WHERE id = #{userId}")
     public Long selectBeanCountById(Long userId);
 
+    // 更新用户信息
+    @Update("UPDATE user SET username = #{username}, account = #{account}, password = #{password}, email = #{email} WHERE id = #{id}")
+    public void updateById(User user);
+
 }

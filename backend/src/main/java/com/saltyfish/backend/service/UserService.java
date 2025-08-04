@@ -24,4 +24,7 @@ public interface UserService {
     // 检查账号是否存在// 存在返回true，不存在返回false
     boolean isAccountExist(String account);
 
+    // 用户密码找回
+    void retrieve(UserDTO userDTO, String emailcode);
+
 }

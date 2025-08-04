@@ -76,7 +76,17 @@ public class userController {
         log.info("检查账号是否存在: " + account);
         boolean exists = userService.isAccountExist(account);
         // 存在返回true，不存在返回false
-        return Result.success(exists, exists? MessageConstant.ACCOUNT_EXISTS:MessageConstant.ACCOUNT_NOT_FOUND);
+        return Result.success(exists, exists ? MessageConstant.ACCOUNT_EXISTS : MessageConstant.ACCOUNT_NOT_FOUND);
+    }
+
+    @PostMapping("/retrieve")
+    @Operation(summary = "用户密码找回", description = "用户密码找回接口")
+    public Result retrieve(@RequestBody UserDTO userDTO, @RequestParam(required = false) String emailcode) {
+        log.info("用户密码找回: " + userDTO.toString());
+        // 密码找回
+        userService.retrieve(userDTO, emailcode);
+        // 返回成功信息
+        return Result.success(MessageConstant.PASSWORD_RESET_SUCCESS);
     }
 
     @GetMapping("/applyForEmailcode")
