@@ -15,6 +15,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
 import com.github.pagehelper.Page;
@@ -83,6 +84,7 @@ public class UserServiceImpl implements UserService {
 
     // 注册操作
     @Override
+    @Transactional
     public void register(UserDTO userDTO, String emailcode) {
         // 判断用户名账号或密码长度是否超过限制
         if (userDTO.getUsername().length() > DatabaseConstant.USERNAME_LENGTH
@@ -208,6 +210,7 @@ public class UserServiceImpl implements UserService {
 
     // 签到操作
     @Override
+    @Transactional
     public void clockIn() {
         // 通过线程变量获取当前用户ID
         Long userId = BaseContext.getCurrentId();
@@ -221,6 +224,7 @@ public class UserServiceImpl implements UserService {
         }
         // 签到成功，更新数据库
         User user = userMapper.selectById(userId);
+        userMapper.updatePlusBeanCount(userId, GameConstant.LOGIN_BEAN);
         beanHistoryMapper.insert(BeanHistory.builder().userId(userId)
                 .changeType(DatabaseConstant.CHANGE_TYPE.CLOCK_IN.toString()).changeAmount(GameConstant.LOGIN_BEAN)
                 .currentBean(user.getBeanCount() + GameConstant.LOGIN_BEAN).createTime(LocalDateTime.now()).build());
