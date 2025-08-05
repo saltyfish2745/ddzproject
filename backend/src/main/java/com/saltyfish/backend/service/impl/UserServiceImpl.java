@@ -98,7 +98,7 @@ public class UserServiceImpl implements UserService {
         User user1 = userMapper.selectByAccount(account);
         if (user1 != null) {
             // 账号已存在抛出异常
-            throw new AccountNotFoundException(MessageConstant.ALREADY_EXISTS);
+            throw new AccountNotFoundException("账号" + MessageConstant.ALREADY_EXISTS);
         }
         // 判断是否有邮箱
         if (userDTO.getEmail() != null) {
