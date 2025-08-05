@@ -49,6 +49,7 @@
               size="large"
               show-password />
           </el-form-item>
+          <div class="email-tip">不绑定邮箱不支持密码找回功能</div>
           <el-form-item prop="email">
             <el-input 
               v-model="registerForm.email" 
@@ -437,5 +438,12 @@ const goLogin = () => {
 .back-btn:hover {
   opacity: 0.8;
   transform: translateY(-1px);
+}
+
+.email-tip {
+  font-size: 12px;
+  color: #909399;
+  margin: -12px 0 4px 0;
+  padding-left: 4px;
 }
 </style>

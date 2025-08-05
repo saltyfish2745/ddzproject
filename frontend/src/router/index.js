@@ -5,7 +5,14 @@ const routes = [
   {
     path: '/',
     name: 'home',
-    component: HomeView
+    component: HomeView,
+    children: [
+      {
+        path: '/pageBeanHistory',
+        name: 'pageBeanHistory',
+        component: () => import('../views/HomeViewChildren/PageBeanHistoryView.vue')
+      }
+    ]
   },
   {
     path: '/login',
@@ -21,6 +28,11 @@ const routes = [
     path: '/retrieve',
     name: 'retrieve',
     component: () => import('../views/RetrieveView.vue')
+  },
+  {
+    path: '/ddz',
+    name: 'ddz',
+    component: () => import('../views/game/DDZView.vue')
   }
 ]
 
