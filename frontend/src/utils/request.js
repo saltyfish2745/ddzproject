@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { ElLoading } from 'element-plus';
+import { BASE_URL } from '../config/url'; // Adjust the import path as necessary
 
 const request = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: BASE_URL,
   timeout: 5000
 });
 
