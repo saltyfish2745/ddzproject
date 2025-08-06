@@ -19,7 +19,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -74,6 +73,7 @@ public class GameRoom {
     private final List<Session> players = new CopyOnWriteArrayList<>();// 玩家session列表
     private final List<Session> absentPlayers = new CopyOnWriteArrayList<>();// 离线玩家session列表
     private List<Card> publicCards = new ArrayList<>();// 公共3张牌
+    private List<String> publicCardsString = new ArrayList<>();// 公共3张牌的字符串表示
     private final Map<Session, List<Card>> hands = new ConcurrentHashMap<>();// 每个玩家的手牌
     private Map<Session, Integer> playersId = new ConcurrentHashMap<>();// 每个玩家的id
     private Map<Session, Long> usersId = new ConcurrentHashMap<>();// 每个玩家的数据库id
@@ -102,6 +102,9 @@ public class GameRoom {
         publicCards.add(cards.remove(0));
         publicCards.add(cards.remove(0));
         publicCards.add(cards.remove(0));
+        publicCards.forEach(publicCard -> {
+            publicCardsString.add(publicCard.getCardname());
+        });
         // 给每个玩家发牌
         for (Session player : players) {
             List<Card> hand = new ArrayList<>();
@@ -147,7 +150,7 @@ public class GameRoom {
                     LocalDateTime.now()));
             // 给winer用户发通知
             JSONObject msg = new JSONObject();
-            msg.put("type", "info");
+            msg.put("type", "game");
             msg.put("currentRoundType", currentRoundType);
             msg.put("message", "玩家退出");
             JSONArray playersJSON = new JSONArray();
@@ -178,7 +181,7 @@ public class GameRoom {
         }
         currentRoundType = CURRENT_ROUND_TYPE_3;
         JSONObject msg = new JSONObject();
-        msg.put("type", "info");
+        msg.put("type", "game");
         msg.put("currentRoundType", currentRoundType);
         msg.put("message", "无人当地主");
 
@@ -191,6 +194,7 @@ public class GameRoom {
         });
 
     }
+
     // 通知全部玩家游戏信息
     private void sendMesToAllPlayers() {
         players.forEach(p -> {
@@ -208,9 +212,9 @@ public class GameRoom {
                 players.add(playerMsg);
             });
             msg.put("players", players);
-            msg.put("type", "info");
+            msg.put("type", "game");
             msg.put("currentRoundType", currentRoundType);
-            msg.put("publicCards", publicCards); // 公共3张牌
+            msg.put("publicCards", publicCardsString); // 公共3张牌
             msg.put("currentPlayerId", currentPlayer.getUserProperties().get("playerId"));// 当前操作玩家的id
             msg.put("playerTurnTimeCountdown", PLAYER_TURNTIME_COUNTDOWN);// 玩家每回合的计时器，单位秒
             msg.put("previousPlayerOperationInfoVO", previousPlayerOperationInfoVO); // 上一个玩家操作信息
@@ -315,20 +319,21 @@ public class GameRoom {
             log.info("出牌阶段");
             // 出牌阶段
             // 处理出牌逻辑,如果无效出牌直接return不反应
-            
+
             // 判断当前玩家pass了但是上个未pass玩家是不是当前玩家.如果是不让pass
             if (playerOperationInfoDTO.getCall() == false
                     && previousNotPassedPlayerOperationInfo.getPlayerId() == playerOperationInfoDTO.getPlayerId())
                 return;
-                    
+            // 如果出牌
             if (playerOperationInfoDTO.getCall() == true) {
-                
+                // 送个handlePlayerPlayCard方法处理出牌逻辑
                 if (!gamePlayCardRuler.handlePlayerPlayCard(this, playerOperationInfoDTO)) {
                     return;
                 }
-
+                // 出完判断手牌空没
                 if (hands.get(currentPlayer).size() == 0) {
                     sendMesToAllPlayers();
+                    // 结算阶段
                     gameOver();
                     return;
                 }
@@ -347,6 +352,9 @@ public class GameRoom {
         if (timerTask != null && !timerTask.isCancelled()) {
             timerTask.cancel(false);
         }
+        log.info("玩家：{},call:{},出牌组合:{},出牌:{}", previousPlayerOperationInfoVO.getPlayerId(),
+                previousPlayerOperationInfoVO.getCall(), previousPlayerOperationInfoVO.getCardCombo(),
+                previousPlayerOperationInfoVO.getCards());
         // 继续下一轮并启动新定时器
         proceedToNextPlayer();
     }
@@ -391,7 +399,7 @@ public class GameRoom {
                 playersJSON.add(loserJsonObject);
             });
             JSONObject msg = new JSONObject();
-            msg.put("type", "info");
+            msg.put("type", "game");
             msg.put("currentRoundType", currentRoundType);
             msg.put("message", "地主获胜");
             msg.put("players", playersJSON);
@@ -436,7 +444,7 @@ public class GameRoom {
                 playersJSON.add(winnerJsonObject);
             });
             JSONObject msg = new JSONObject();
-            msg.put("type", "info");
+            msg.put("type", "game");
             msg.put("currentRoundType", currentRoundType);
             msg.put("message", "农民获胜");
             msg.put("players", playersJSON);
@@ -634,13 +642,11 @@ class GamePlayCardRuler {
         if (isBomb(cards))
             return new CardCombo(ComboType.BOMB, cards.get(0).getCardvalue());
 
-
         // 四带牌型判断（在炸弹判断之后）
         CardCombo quadrupletCombo = checkQuadrupletWithCards(cards);
         if (quadrupletCombo != null) {
             return quadrupletCombo;
         }
-
 
         CardCombo tripletWithSingle = checkTripletWithSingle(cards);
         if (tripletWithSingle != null)
@@ -650,12 +656,10 @@ class GamePlayCardRuler {
         if (tripletWithPair != null)
             return tripletWithPair;
 
-
         CardCombo tripletCombo = checkTripletStraight(cards);
         if (tripletCombo != null) {
             return tripletCombo;
         }
-
 
         // 连对判断（需要优先于单顺判断）
         PairStraightType pairStraight = checkPairStraight(cards);
@@ -668,7 +672,6 @@ class GamePlayCardRuler {
         if (straight != null) {
             return new CardCombo(straight.comboType, cards.get(0).getCardvalue());
         }
-
 
         // 常规牌型判断
         switch (cards.size()) {
@@ -691,6 +694,7 @@ class GamePlayCardRuler {
         }
         return null;
     }
+
     // 四带牌型验证
     private CardCombo checkQuadrupletWithCards(List<Card> cards) {
         // 基础校验
@@ -731,7 +735,6 @@ class GamePlayCardRuler {
         }
         return null;
     }
-
 
     // 三顺带单验证（例如：333444+76）
     private CardCombo checkTripletWithSingle(List<Card> cards) {
@@ -863,7 +866,6 @@ class GamePlayCardRuler {
         return countMap.values().stream().allMatch(c -> c == 2);
     }
 
-
     // 三顺验证方法
     private CardCombo checkTripletStraight(List<Card> cards) {
         // 牌数必须为3的倍数且至少6张（2组）
@@ -903,7 +905,6 @@ class GamePlayCardRuler {
             default -> null;
         };
     }
-
 
     // 顺子验证逻辑
     private StraightType checkStraight(List<Card> cards) {
@@ -1012,7 +1013,6 @@ class GamePlayCardRuler {
             this.comboType = comboType;
         }
     }
-
 
     // 更新游戏状态
     private void updateGameState(GameRoom gameRoom, Session player, List<Card> playedCards, CardCombo combo) {

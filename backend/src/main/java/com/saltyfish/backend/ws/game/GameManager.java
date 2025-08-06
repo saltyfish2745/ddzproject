@@ -28,17 +28,17 @@ public class GameManager {
         rooms.remove(roomId);
     }
 
-    // 加入匹配池
+    // 加入匹配池// synchronized保证线程安全
     public static synchronized void joinMatching(Session session) {
         matchingPool.add(session);
         if (matchingPool.size() >= 3) {
             // 创建玩家List和房间
             List<Session> players = new ArrayList<>(matchingPool).subList(0, 3);
+            // 从匹配池移除玩家
+            matchingPool.removeAll(players);
             GameRoom room = new GameRoom(players);
             // 加入房间集合
             rooms.put(room.getRoomId(), room);
-            // 从匹配池移除玩家
-            matchingPool.removeAll(players);
             // 设置玩家ID用于前端分辨玩家身份，因为username允许重名
             for (int i = 0; i < players.size(); i++) {
                 players.get(i).getUserProperties().put("playerId", i);
@@ -73,6 +73,10 @@ public class GameManager {
             // 房间初始化
             room.initialize();
         }
+        // 通知匹配池当前人数
+        matchingPool.forEach(s -> {
+            s.getAsyncRemote().sendText("{\"type\":\"matching\",\"currentCount\":" + matchingPool.size() + "}");
+        });
     }
 
     // 生成匹配成功JSON消息
@@ -108,17 +112,22 @@ public class GameManager {
     public static void handleDisconnect(Session session) {
         // 通过session的房间Id判断玩家是否在房间中
         if (session.getUserProperties().containsKey("roomId")) {
-            try{
+            try {
                 rooms.get(session.getUserProperties().get("roomId")).handleDisconnect(session);
             } catch (Exception e) {
             }
         } else {
             // 不在房间中，从匹配池移除玩家
             matchingPool.remove(session);
+            // 通知匹配池当前人数
+            matchingPool.forEach(s -> {
+                s.getAsyncRemote().sendText("{\"type\":\"matching\",\"currentCount\":" + matchingPool.size() + "}");
+            });
         }
     }
 
     public static void handleMessage(Session session, JSONObject json) {
+        log.info("ROOMID:{}", session.getUserProperties().get("roomId"));
         rooms.get(session.getUserProperties().get("roomId")).handlePlayerOperation(session, json);
     }
 
