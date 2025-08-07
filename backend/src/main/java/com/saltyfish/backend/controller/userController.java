@@ -29,9 +29,12 @@ import java.util.Map;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
+
 
 @Slf4j
 @RestController
@@ -124,6 +127,42 @@ public class userController {
         log.info("分页查看用户豆币历史: page=" + page + ", pageSize=" + pageSize);
         PageInfo<BeanHistoryVO> pageResult = userService.pageBeanHistory(page, pageSize);
         return Result.success(pageResult);
+    }
+
+    @PutMapping("/updateUsername")
+    @Operation(summary = "更新用户名", description = "更新用户名接口")
+    public Result updateUsername(@RequestParam String username) {
+        log.info("更新用户名: " + username);
+        userService.updateUsername(username);
+        return Result.success("用户名更新成功");
+    }
+
+    @PutMapping("/updatePassword")
+    @Operation(summary = "更新密码", description = "更新密码接口")
+    public Result updatePassword(@RequestParam String oldPassword, @RequestParam String newPassword) {
+        log.info("更新密码: " + newPassword);
+        userService.updatePassword(oldPassword, newPassword);
+        return Result.success("密码更新成功");
+    }
+
+    @GetMapping("applyForEmailcodeFrombindingEmail")
+    @Operation(summary = "从绑定的邮箱申请邮箱验证码", description = "从绑定的邮箱申请邮箱验证码接口")
+    public Result applyForEmailcodeFrombindingEmail() {
+        log.info("从绑定的邮箱申请邮箱验证码: ");
+        userService.applyForEmailcodeFrombindingEmail();
+        return Result.success(DatabaseConstant.EMAILCODE_COUNTDOWN);
+    }
+
+    @PutMapping("/updateEmail")
+    @Operation(summary = "更新邮箱", description = "更新邮箱接口")
+    public Result updateEmail(@RequestParam(required = false) String oldCode, @RequestParam String newCode,
+            @RequestParam String newEmail) {
+        log.info("更新邮箱: " + newEmail);
+        if(oldCode == null || oldCode.isEmpty()) {
+            oldCode = "";
+        }
+        userService.updateEmail(oldCode, newCode, newEmail);
+        return Result.success("邮箱更新成功");
     }
 
 }

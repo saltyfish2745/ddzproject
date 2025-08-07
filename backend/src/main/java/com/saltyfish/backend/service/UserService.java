@@ -34,4 +34,16 @@ public interface UserService {
     // 分页查看用户豆币历史
     PageInfo<BeanHistoryVO> pageBeanHistory(int page, int pageSize);
 
+    // 更新用户名
+    void updateUsername(String username);
+
+    // 更新密码
+    void updatePassword(String oldPassword, String newPassword);
+
+    // 从绑定的邮箱申请邮箱验证码
+    void applyForEmailcodeFrombindingEmail();
+
+    // 更新邮箱
+    void updateEmail(String oldCode, String newCode, String newEmail);
+
 }

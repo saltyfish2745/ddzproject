@@ -180,7 +180,7 @@ public class UserServiceImpl implements UserService {
         Matcher matcher = pattern.matcher(email);
         // 验证邮箱格式
         if (!matcher.matches()) {
-            throw new IllegalArgumentException("邮箱格式不正确");
+            throw new BaseException("邮箱格式不正确");
         }
         // 生成随机邮箱验证码,random生成的范围为0.0-1.0之间，转string取后8位
         String emailcode = Double.toString(Math.random()).substring(2, 8);
@@ -249,6 +249,67 @@ public class UserServiceImpl implements UserService {
         PageHelper.startPage(page, pageSize);
         List<BeanHistoryVO> pageResult = userMapper.pageBeanHistoryByUserId(userId, page, pageSize);
         return new PageInfo<>(pageResult);
+    }
+
+    // 更新用户名
+    @Override
+    public void updateUsername(String username) {
+        Long userId = BaseContext.getCurrentId();
+        userMapper.updateUsernameById(username, userId);
+    }
+
+    @Override // 更新密码
+    public void updatePassword(String oldPassword, String newPassword) {
+        Long userId = BaseContext.getCurrentId();
+        // 根据用户ID查询用户信息
+        User user = userMapper.selectById(userId);
+        // 判断旧密码是否正确
+        if (!user.getPassword().equals(DigestUtils.md5DigestAsHex(oldPassword.getBytes()))) {
+            throw new BaseException(MessageConstant.PASSWORD_ERROR);
+        }
+        // 更新密码
+        user.setPassword(DigestUtils.md5DigestAsHex(newPassword.getBytes()));
+        userMapper.updateById(user);
+    }
+
+    @Override // 从绑定的邮箱申请邮箱验证码
+    public void applyForEmailcodeFrombindingEmail() {
+        Long userId = BaseContext.getCurrentId();
+        // 根据用户ID查询用户信息
+        User user = userMapper.selectById(userId);
+        // 判断邮箱是否正确
+        if (user.getEmail() == null) {
+            // 邮箱不正确抛出异常
+            throw new BaseException(MessageConstant.EMAIL_NOT_FOUND);
+        }
+        // 申请邮箱验证码
+        applyForEmailcode(user.getEmail());
+    }
+
+    // 更新邮箱
+    @Override
+    public void updateEmail(String oldCode, String newCode, String newEmail) {
+        Long userId = BaseContext.getCurrentId();
+        // 根据用户ID查询用户信息
+        User user = userMapper.selectById(userId);
+        // 如果用户已绑定邮箱
+        if (user.getEmail() != null) {
+            // 判断旧邮箱验证码是否正确
+            String oldEmailcodeFromRedis = (String) redisTemplate.opsForValue().get(user.getEmail());
+            if (oldEmailcodeFromRedis == null || !oldEmailcodeFromRedis.equals(oldCode)) {
+                // 验证码错误抛出异常
+                throw new BaseException("老邮箱" + MessageConstant.VERIFICATION_CODE_ERROR);
+            }
+        }
+        // 判断新邮箱验证码是否正确
+        String newEmailcodeFromRedis = (String) redisTemplate.opsForValue().get(newEmail);
+        if (newEmailcodeFromRedis == null || !newEmailcodeFromRedis.equals(newCode)) {
+            // 验证码错误抛出异常
+            throw new BaseException(MessageConstant.VERIFICATION_CODE_ERROR);
+        }
+        // 更新邮箱
+        user.setEmail(newEmail);
+        userMapper.updateById(user);
     }
 
 }

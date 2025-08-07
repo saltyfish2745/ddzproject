@@ -41,4 +41,8 @@ public interface UserMapper {
 
     public List<BeanHistoryVO> pageBeanHistoryByUserId(Long userId, Integer page, Integer pageSize);
 
+    // 根据ID更改用户名
+    @Update("UPDATE user SET username = #{username} WHERE id = #{userId}")
+    public void updateUsernameById(String username, Long userId);
+
 }
