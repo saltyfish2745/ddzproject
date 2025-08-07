@@ -4,7 +4,11 @@ export default {
     namespaced: true,
     state() {
         return {
-            token: getToken() // 用户令牌
+            token: getToken(), // 用户令牌
+            matchingStatus: {
+                isMatching: false,
+                count: 0
+            }
         }
     },
     mutations: {
@@ -12,6 +16,13 @@ export default {
         setToken(state, token) {
             state.token = token;
             setToken(token); // 存储到本地
+        },
+        // 设置匹配状态
+        setMatchingStatus(state, payload) {
+            state.matchingStatus = {
+                isMatching: payload.isMatching,
+                count: payload.count
+            };
         }
     },
     actions: {
