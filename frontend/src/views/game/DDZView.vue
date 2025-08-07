@@ -142,7 +142,7 @@
       </div>
     </div>
     <!-- 你的操作区域 -->
-    <div class="your-operation-area" v-if="gameState.currentPlayerId === gameState.yourPlayerId">
+    <div class="your-operation-area" v-if="gameState.currentPlayerId === gameState.yourPlayerId && gameState.currentPlayerId !== null">
       <!-- 叫牌阶段按钮 -->
       <div v-if="gameState.currentRoundType === '叫牌阶段'" class="call-buttons">
         <el-button type="success" @click="send({call: 1})">叫地主</el-button>

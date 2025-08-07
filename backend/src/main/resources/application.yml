@@ -30,7 +30,7 @@ spring:
     protocol: ${ddzproject.email.protocol}
     properties:
       mail:
-        debug: true # 开启debug模式，可以在console看到详细的发送日志
+        debug: false # 开启debug模式，可以在console看到详细的发送日志
         smtp:
           auth: true
           starttls:
@@ -57,6 +57,7 @@ mybatis:
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.saltyfish.backend
   configuration:
+    # 开启驼峰命名转换
     map-underscore-to-camel-case: true
     # 打印sql语句
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl

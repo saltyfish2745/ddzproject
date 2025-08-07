@@ -2,7 +2,6 @@ package com.saltyfish.backend.pojo.dto;
 
 import java.io.Serializable;
 
-import org.springframework.web.multipart.MultipartFile;
 
 import lombok.Data;
 

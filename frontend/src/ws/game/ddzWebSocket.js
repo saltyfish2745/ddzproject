@@ -1,5 +1,4 @@
 import { WS_URL } from '@/config/url';
-import VueNativeSock from 'vue-native-websocket';
 import { useStore } from 'vuex';
 
 /**

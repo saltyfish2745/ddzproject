@@ -106,16 +106,20 @@ const toggleFloatingWindow = () => {
 }
 
 const fetchHtmlContent = async () => {
-  try {
-    const res = await getReadFile()
-    if (res.data.code === 1) {
-      htmlContent.value = res.data.msg || ''
-    } else {
-      ElMessage.error('获取内容失败')
-    }
-  } catch (error) {
-    ElMessage.error('网络错误')
-  }
+  // 通过前端配置获取免打包配置信息
+  htmlContent.value = window.webConfig.webMessage || '欢迎使用本系统！'
+
+  // 通过后端获取免打包配置信息
+  // try {
+  //   const res = await getReadFile()
+  //   if (res.data.code === 1) {
+  //     htmlContent.value = res.data.msg || ''
+  //   } else {
+  //     ElMessage.error('获取内容失败')
+  //   }
+  // } catch (error) {
+  //   ElMessage.error('网络错误')
+  // }
 }
 
 onMounted(() => {

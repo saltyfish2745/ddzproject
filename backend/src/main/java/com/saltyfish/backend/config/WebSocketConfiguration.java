@@ -11,7 +11,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.saltyfish.backend.constant.JwtClaimsConstant;
 import com.saltyfish.backend.context.ApplicationContextUtil;
-import com.saltyfish.backend.context.BaseContext;
 import com.saltyfish.backend.properties.JwtProperties;
 import com.saltyfish.backend.utils.JwtUtil;
 
