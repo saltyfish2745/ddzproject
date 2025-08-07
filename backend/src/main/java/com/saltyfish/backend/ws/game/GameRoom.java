@@ -60,9 +60,9 @@ public class GameRoom {
     private static final String CURRENT_ROUND_TYPE_2 = "出牌阶段";
     private static final String CURRENT_ROUND_TYPE_3 = "结算阶段";
 
-    private static final Long BASIC_BEAN = 100L;// 基础豆子数
+    private static final Long BASIC_BEAN = 1000L;// 基础豆子数
 
-    private static final int PLAYER_TURNTIME_COUNTDOWN = 60; // 玩家每回合的计时器，单位秒
+    private static final int PLAYER_TURNTIME_COUNTDOWN = 20; // 玩家每回合的计时器，单位秒
 
     // 因为websock不归spring管理，所以需要用ApplicationContextUtil来注入mapper
     private UserMapper userMapper = ApplicationContextUtil.getBean(UserMapper.class);
@@ -121,7 +121,6 @@ public class GameRoom {
     }
 
     public void handleDisconnect(Session session) {
-        GameManager.removeGameRoom(roomId);
         // 取消当前定时任务
         if (timerTask != null && !timerTask.isCancelled()) {
             timerTask.cancel(false);
@@ -150,7 +149,7 @@ public class GameRoom {
                     LocalDateTime.now()));
             // 给winer用户发通知
             JSONObject msg = new JSONObject();
-            msg.put("type", "game");
+            msg.put("type", "gameOver");
             msg.put("currentRoundType", currentRoundType);
             msg.put("message", "玩家退出");
             JSONArray playersJSON = new JSONArray();
@@ -160,17 +159,17 @@ public class GameRoom {
             playersJSON.add(loserJsonObject);
             usersId.forEach((p, winerId) -> {
                 JSONObject winerJsonObject = new JSONObject();
-                winerJsonObject.put("playerId", winerId);
+                winerJsonObject.put("playerId", (int) p.getUserProperties().get("playerId"));
                 winerJsonObject.put("bean", bean);
                 playersJSON.add(winerJsonObject);
             });
             msg.put("players", playersJSON);
             try {
-                player.getAsyncRemote().sendText(msg.toJSONString());
-                player.close();
+                player.getBasicRemote().sendText(msg.toJSONString());
             } catch (IOException e) {
             }
         });
+        GameManager.removeGameRoom(roomId);
     }
 
     public void gameOverButNotCalled() {
@@ -181,13 +180,13 @@ public class GameRoom {
         }
         currentRoundType = CURRENT_ROUND_TYPE_3;
         JSONObject msg = new JSONObject();
-        msg.put("type", "game");
+        msg.put("type", "gameOver");
         msg.put("currentRoundType", currentRoundType);
         msg.put("message", "无人当地主");
 
         players.forEach(player -> {
             try {
-                player.getAsyncRemote().sendText(msg.toJSONString());
+                player.getBasicRemote().sendText(msg.toJSONString());
                 player.close();
             } catch (IOException e) {
             }
@@ -218,8 +217,12 @@ public class GameRoom {
             msg.put("currentPlayerId", currentPlayer.getUserProperties().get("playerId"));// 当前操作玩家的id
             msg.put("playerTurnTimeCountdown", PLAYER_TURNTIME_COUNTDOWN);// 玩家每回合的计时器，单位秒
             msg.put("previousPlayerOperationInfoVO", previousPlayerOperationInfoVO); // 上一个玩家操作信息
+            msg.put("previousNotPassedPlayerOperationInfoPlayerId",
+                    previousNotPassedPlayerOperationInfo != null ? previousNotPassedPlayerOperationInfo.getPlayerId()
+                            : null); // 上个未pass的玩家的操作信息
             msg.put("landlordPlayerId", landlordPlayerId); // 地主玩家id
             msg.put("gameMultiplier", gameMultiplier); // 游戏倍率
+            msg.put("basicBean", BASIC_BEAN); // 基础豆子数
             p.getAsyncRemote().sendText(msg.toJSONString());
         });
 
@@ -383,7 +386,7 @@ public class GameRoom {
             usersId.remove(currentPlayer);
             JSONArray playersJSON = new JSONArray();
             JSONObject winnerJsonObject = new JSONObject();
-            winnerJsonObject.put("playerId", WinnerId);
+            winnerJsonObject.put("playerId", (int) currentPlayer.getUserProperties().get("playerId"));
             winnerJsonObject.put("bean", bean * 2);
             playersJSON.add(winnerJsonObject);
             // 给农民扣除豆子
@@ -394,18 +397,18 @@ public class GameRoom {
                 beanHistoryMapper.insert(new BeanHistory(userId, GameConstant.CHANGE_TYPE_GAME, -(bean), currentBean1,
                         LocalDateTime.now()));
                 JSONObject loserJsonObject = new JSONObject();
-                loserJsonObject.put("playerId", userId);
+                loserJsonObject.put("playerId", (int) player.getUserProperties().get("playerId"));
                 loserJsonObject.put("bean", -(bean));
                 playersJSON.add(loserJsonObject);
             });
             JSONObject msg = new JSONObject();
-            msg.put("type", "game");
+            msg.put("type", "gameOver");
             msg.put("currentRoundType", currentRoundType);
             msg.put("message", "地主获胜");
             msg.put("players", playersJSON);
             players.forEach(p -> {
                 try {
-                    p.getAsyncRemote().sendText(msg.toJSONString());
+                    p.getBasicRemote().sendText(msg.toJSONString());
                     p.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -439,18 +442,18 @@ public class GameRoom {
                 beanHistoryMapper.insert(new BeanHistory(userId, GameConstant.CHANGE_TYPE_GAME, bean, currentBean1,
                         LocalDateTime.now()));
                 JSONObject winnerJsonObject = new JSONObject();
-                winnerJsonObject.put("playerId", userId);
+                winnerJsonObject.put("playerId", (int) player.getUserProperties().get("playerId"));
                 winnerJsonObject.put("bean", bean);
                 playersJSON.add(winnerJsonObject);
             });
             JSONObject msg = new JSONObject();
-            msg.put("type", "game");
+            msg.put("type", "gameOver");
             msg.put("currentRoundType", currentRoundType);
             msg.put("message", "农民获胜");
             msg.put("players", playersJSON);
             players.forEach(p -> {
                 try {
-                    p.getAsyncRemote().sendText(msg.toJSONString());
+                    p.getBasicRemote().sendText(msg.toJSONString());
                     p.close();
                 } catch (IOException e) {
                     e.printStackTrace();
