@@ -2,6 +2,7 @@ package com.saltyfish.backend.service.impl;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,8 +15,12 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import com.saltyfish.backend.constant.DatabaseConstant;
 import com.saltyfish.backend.constant.GameConstant;
 import com.saltyfish.backend.constant.MessageConstant;
@@ -28,7 +33,10 @@ import com.saltyfish.backend.pojo.dto.UserDTO;
 import com.saltyfish.backend.pojo.dto.UserLoginDTO;
 import com.saltyfish.backend.pojo.entity.BeanHistory;
 import com.saltyfish.backend.pojo.entity.User;
+import com.saltyfish.backend.pojo.vo.BeanHistoryVO;
+import com.saltyfish.backend.pojo.vo.UserInfo;
 import com.saltyfish.backend.properties.EmailProperties;
+import com.saltyfish.backend.result.PageResult;
 import com.saltyfish.backend.service.UserService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +84,7 @@ public class UserServiceImpl implements UserService {
 
     // 注册操作
     @Override
+    @Transactional
     public void register(UserDTO userDTO, String emailcode) {
         // 判断用户名账号或密码长度是否超过限制
         if (userDTO.getUsername().length() > DatabaseConstant.USERNAME_LENGTH
@@ -89,7 +98,7 @@ public class UserServiceImpl implements UserService {
         User user1 = userMapper.selectByAccount(account);
         if (user1 != null) {
             // 账号已存在抛出异常
-            throw new AccountNotFoundException(MessageConstant.ALREADY_EXISTS);
+            throw new AccountNotFoundException("账号" + MessageConstant.ALREADY_EXISTS);
         }
         // 判断是否有邮箱
         if (userDTO.getEmail() != null) {
@@ -118,6 +127,48 @@ public class UserServiceImpl implements UserService {
                 .currentBean(user2.getBeanCount()).createTime(LocalDateTime.now()).build());
     }
 
+    // 检查账号是否存在// 存在返回true，不存在返回false
+    @Override
+    public boolean isAccountExist(String account) {
+        User user = userMapper.selectByAccount(account);
+        return user != null ? true : false;
+    }
+
+    // 用户密码找回
+    @Override
+    public void retrieve(UserDTO userDTO, String emailcode) {
+        // 判断用户名账号或密码长度是否超过限制
+        if (userDTO.getAccount().length() > DatabaseConstant.ACCOUNT_LENGTH
+                || userDTO.getPassword().length() > DatabaseConstant.PASSWORD_LENGTH) {
+            // 账号或密码长度超过限制抛出异常
+            throw new BaseException(MessageConstant.UNKNOWN_ERROR);
+        }
+        // 根据账号查询数据库中的数据
+        User user = userMapper.selectByAccount(userDTO.getAccount());
+        // 判断账号是否存在
+        if (user == null) {
+            // 账号不存在抛出异常
+            throw new AccountNotFoundException(MessageConstant.ACCOUNT_NOT_FOUND);
+        }
+        // 判断邮箱是否正确
+        if (user.getEmail() == null || !user.getEmail().equals(userDTO.getEmail())) {
+            // 邮箱不正确抛出异常
+            throw new BaseException(MessageConstant.ACCOUNT_NOT_FOUND);
+        }
+        // 判断是否有邮箱
+        if (userDTO.getEmail() != null) {
+            // 判断验证码是否正确
+            String emailcodeFromRedis = (String) redisTemplate.opsForValue().get(userDTO.getEmail());
+            if (emailcodeFromRedis == null || !emailcodeFromRedis.equals(emailcode)) {
+                // 验证码错误抛出异常
+                throw new BaseException(MessageConstant.VERIFICATION_CODE_ERROR);
+            }
+        }
+        // 更新密码
+        user.setPassword(DigestUtils.md5DigestAsHex(userDTO.getPassword().getBytes()));
+        userMapper.updateById(user);
+    }
+
     // 申请邮箱验证码操作
     @Override
     public void applyForEmailcode(String email) {
@@ -129,7 +180,7 @@ public class UserServiceImpl implements UserService {
         Matcher matcher = pattern.matcher(email);
         // 验证邮箱格式
         if (!matcher.matches()) {
-            throw new IllegalArgumentException("邮箱格式不正确");
+            throw new BaseException("邮箱格式不正确");
         }
         // 生成随机邮箱验证码,random生成的范围为0.0-1.0之间，转string取后8位
         String emailcode = Double.toString(Math.random()).substring(2, 8);
@@ -137,7 +188,7 @@ public class UserServiceImpl implements UserService {
         sendEmailcode(email, emailcode);
         // 先发送邮件，再保存到redis防止邮箱错误还存入redis
         // 30秒定时保存邮箱验证码到redis后续与注册接口进行验证
-        redisTemplate.opsForValue().set(email, emailcode, 30, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(email, emailcode, DatabaseConstant.EMAILCODE_COUNTDOWN, TimeUnit.SECONDS);
     }
 
     // 用异步的方式发送邮件提高效率
@@ -159,6 +210,7 @@ public class UserServiceImpl implements UserService {
 
     // 签到操作
     @Override
+    @Transactional
     public void clockIn() {
         // 通过线程变量获取当前用户ID
         Long userId = BaseContext.getCurrentId();
@@ -172,18 +224,92 @@ public class UserServiceImpl implements UserService {
         }
         // 签到成功，更新数据库
         User user = userMapper.selectById(userId);
+        userMapper.updatePlusBeanCount(userId, GameConstant.LOGIN_BEAN);
         beanHistoryMapper.insert(BeanHistory.builder().userId(userId)
                 .changeType(DatabaseConstant.CHANGE_TYPE.CLOCK_IN.toString()).changeAmount(GameConstant.LOGIN_BEAN)
                 .currentBean(user.getBeanCount() + GameConstant.LOGIN_BEAN).createTime(LocalDateTime.now()).build());
     }
 
-    // 查看bean操作
+    // 查看用户信息
     @Override
-    public Long viewBean() {
-        // 通过线程变量获取当前用户ID
+    public UserInfo viewUserInfo() {
         Long userId = BaseContext.getCurrentId();
-        // 查询数据库中用户的bean数量
+        // 根据用户ID查询用户信息
         User user = userMapper.selectById(userId);
-        return user.getBeanCount();
+        // 复制user对象到UserInfo对象
+        UserInfo userInfo = new UserInfo();
+        BeanUtils.copyProperties(user, userInfo);
+        return userInfo;
     }
+
+    // 分页查看用户豆币历史
+    @Override
+    public PageInfo<BeanHistoryVO> pageBeanHistory(int page, int pageSize) {
+        Long userId = BaseContext.getCurrentId();
+        PageHelper.startPage(page, pageSize);
+        List<BeanHistoryVO> pageResult = userMapper.pageBeanHistoryByUserId(userId, page, pageSize);
+        return new PageInfo<>(pageResult);
+    }
+
+    // 更新用户名
+    @Override
+    public void updateUsername(String username) {
+        Long userId = BaseContext.getCurrentId();
+        userMapper.updateUsernameById(username, userId);
+    }
+
+    @Override // 更新密码
+    public void updatePassword(String oldPassword, String newPassword) {
+        Long userId = BaseContext.getCurrentId();
+        // 根据用户ID查询用户信息
+        User user = userMapper.selectById(userId);
+        // 判断旧密码是否正确
+        if (!user.getPassword().equals(DigestUtils.md5DigestAsHex(oldPassword.getBytes()))) {
+            throw new BaseException(MessageConstant.PASSWORD_ERROR);
+        }
+        // 更新密码
+        user.setPassword(DigestUtils.md5DigestAsHex(newPassword.getBytes()));
+        userMapper.updateById(user);
+    }
+
+    @Override // 从绑定的邮箱申请邮箱验证码
+    public void applyForEmailcodeFrombindingEmail() {
+        Long userId = BaseContext.getCurrentId();
+        // 根据用户ID查询用户信息
+        User user = userMapper.selectById(userId);
+        // 判断邮箱是否正确
+        if (user.getEmail() == null) {
+            // 邮箱不正确抛出异常
+            throw new BaseException(MessageConstant.EMAIL_NOT_FOUND);
+        }
+        // 申请邮箱验证码
+        applyForEmailcode(user.getEmail());
+    }
+
+    // 更新邮箱
+    @Override
+    public void updateEmail(String oldCode, String newCode, String newEmail) {
+        Long userId = BaseContext.getCurrentId();
+        // 根据用户ID查询用户信息
+        User user = userMapper.selectById(userId);
+        // 如果用户已绑定邮箱
+        if (user.getEmail() != null) {
+            // 判断旧邮箱验证码是否正确
+            String oldEmailcodeFromRedis = (String) redisTemplate.opsForValue().get(user.getEmail());
+            if (oldEmailcodeFromRedis == null || !oldEmailcodeFromRedis.equals(oldCode)) {
+                // 验证码错误抛出异常
+                throw new BaseException("老邮箱" + MessageConstant.VERIFICATION_CODE_ERROR);
+            }
+        }
+        // 判断新邮箱验证码是否正确
+        String newEmailcodeFromRedis = (String) redisTemplate.opsForValue().get(newEmail);
+        if (newEmailcodeFromRedis == null || !newEmailcodeFromRedis.equals(newCode)) {
+            // 验证码错误抛出异常
+            throw new BaseException(MessageConstant.VERIFICATION_CODE_ERROR);
+        }
+        // 更新邮箱
+        user.setEmail(newEmail);
+        userMapper.updateById(user);
+    }
+
 }

@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserLoginVO implements Serializable {
+public class UserInfo implements Serializable {
 
-    private String token;
+    private String username; // 用户名
+    private Long beanCount; // 豆子数量
+    
 }

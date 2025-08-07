@@ -19,7 +19,7 @@ import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
 
-@ServerEndpoint(value = "/user/ddz", configurator = WebSocketConfiguration.class)
+@ServerEndpoint(value = "/ddz", configurator = WebSocketConfiguration.class)
 @Component
 @Slf4j
 public class DDZEndpoint {
@@ -30,7 +30,7 @@ public class DDZEndpoint {
     @OnOpen
     public void onOpen(Session session, EndpointConfig config) {
         // 保存当前用户的id
-        Long userId = BaseContext.getCurrentId();
+        Long userId = (Long)config.getUserProperties().get("userId");
         // 根据userId查询用户信息
         User user = userMapper.selectById(userId);
         // 保存用户信息到session属性中

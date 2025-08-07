@@ -58,14 +58,23 @@ mybatis:
   type-aliases-package: com.saltyfish.backend
   configuration:
     map-underscore-to-camel-case: true
+    # 打印sql语句
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+  params: count=countSql
 
 logging:
   level:
     com:
       saltyfish:
-        mapper: DEBUG
-        server: info
-        controller: info
+        backend:
+          mapper: DEBUG
+          server: info
+          controller: info
 
 backend:
   jwt:

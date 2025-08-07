@@ -19,7 +19,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -61,9 +60,9 @@ public class GameRoom {
     private static final String CURRENT_ROUND_TYPE_2 = "出牌阶段";
     private static final String CURRENT_ROUND_TYPE_3 = "结算阶段";
 
-    private static final Long BASIC_BEAN = 100L;// 基础豆子数
+    private static final Long BASIC_BEAN = 1000L;// 基础豆子数
 
-    private static final int PLAYER_TURNTIME_COUNTDOWN = 60; // 玩家每回合的计时器，单位秒
+    private static final int PLAYER_TURNTIME_COUNTDOWN = 20; // 玩家每回合的计时器，单位秒
 
     // 因为websock不归spring管理，所以需要用ApplicationContextUtil来注入mapper
     private UserMapper userMapper = ApplicationContextUtil.getBean(UserMapper.class);
@@ -74,6 +73,7 @@ public class GameRoom {
     private final List<Session> players = new CopyOnWriteArrayList<>();// 玩家session列表
     private final List<Session> absentPlayers = new CopyOnWriteArrayList<>();// 离线玩家session列表
     private List<Card> publicCards = new ArrayList<>();// 公共3张牌
+    private List<String> publicCardsString = new ArrayList<>();// 公共3张牌的字符串表示
     private final Map<Session, List<Card>> hands = new ConcurrentHashMap<>();// 每个玩家的手牌
     private Map<Session, Integer> playersId = new ConcurrentHashMap<>();// 每个玩家的id
     private Map<Session, Long> usersId = new ConcurrentHashMap<>();// 每个玩家的数据库id
@@ -81,7 +81,7 @@ public class GameRoom {
     private PlayerOperationInfo previousNotPassedPlayerOperationInfo; // 上个未pass的玩家的操作信息
     private Session currentPlayer;// 当前玩家session
     private String currentRoundType = CURRENT_ROUND_TYPE_1;// 当前轮次类型
-    private Integer landloadPlayerId;// 地主玩家id
+    private Integer landlordPlayerId;// 地主玩家id
     private Integer gameMultiplier = 1;// 游戏倍数
 
     // 构造方法
@@ -102,6 +102,9 @@ public class GameRoom {
         publicCards.add(cards.remove(0));
         publicCards.add(cards.remove(0));
         publicCards.add(cards.remove(0));
+        publicCards.forEach(publicCard -> {
+            publicCardsString.add(publicCard.getCardname());
+        });
         // 给每个玩家发牌
         for (Session player : players) {
             List<Card> hand = new ArrayList<>();
@@ -118,7 +121,6 @@ public class GameRoom {
     }
 
     public void handleDisconnect(Session session) {
-        GameManager.removeGameRoom(roomId);
         // 取消当前定时任务
         if (timerTask != null && !timerTask.isCancelled()) {
             timerTask.cancel(false);
@@ -147,7 +149,7 @@ public class GameRoom {
                     LocalDateTime.now()));
             // 给winer用户发通知
             JSONObject msg = new JSONObject();
-            msg.put("type", "info");
+            msg.put("type", "gameOver");
             msg.put("currentRoundType", currentRoundType);
             msg.put("message", "玩家退出");
             JSONArray playersJSON = new JSONArray();
@@ -157,17 +159,17 @@ public class GameRoom {
             playersJSON.add(loserJsonObject);
             usersId.forEach((p, winerId) -> {
                 JSONObject winerJsonObject = new JSONObject();
-                winerJsonObject.put("playerId", winerId);
+                winerJsonObject.put("playerId", (int) p.getUserProperties().get("playerId"));
                 winerJsonObject.put("bean", bean);
                 playersJSON.add(winerJsonObject);
             });
             msg.put("players", playersJSON);
             try {
-                player.getAsyncRemote().sendText(msg.toJSONString());
-                player.close();
+                player.getBasicRemote().sendText(msg.toJSONString());
             } catch (IOException e) {
             }
         });
+        GameManager.removeGameRoom(roomId);
     }
 
     public void gameOverButNotCalled() {
@@ -178,19 +180,20 @@ public class GameRoom {
         }
         currentRoundType = CURRENT_ROUND_TYPE_3;
         JSONObject msg = new JSONObject();
-        msg.put("type", "info");
+        msg.put("type", "gameOver");
         msg.put("currentRoundType", currentRoundType);
         msg.put("message", "无人当地主");
 
         players.forEach(player -> {
             try {
-                player.getAsyncRemote().sendText(msg.toJSONString());
+                player.getBasicRemote().sendText(msg.toJSONString());
                 player.close();
             } catch (IOException e) {
             }
         });
 
     }
+
     // 通知全部玩家游戏信息
     private void sendMesToAllPlayers() {
         players.forEach(p -> {
@@ -208,14 +211,18 @@ public class GameRoom {
                 players.add(playerMsg);
             });
             msg.put("players", players);
-            msg.put("type", "info");
+            msg.put("type", "game");
             msg.put("currentRoundType", currentRoundType);
-            msg.put("publicCards", publicCards); // 公共3张牌
+            msg.put("publicCards", publicCardsString); // 公共3张牌
             msg.put("currentPlayerId", currentPlayer.getUserProperties().get("playerId"));// 当前操作玩家的id
             msg.put("playerTurnTimeCountdown", PLAYER_TURNTIME_COUNTDOWN);// 玩家每回合的计时器，单位秒
             msg.put("previousPlayerOperationInfoVO", previousPlayerOperationInfoVO); // 上一个玩家操作信息
-            msg.put("landloadPlayerId", landloadPlayerId); // 地主玩家id
+            msg.put("previousNotPassedPlayerOperationInfoPlayerId",
+                    previousNotPassedPlayerOperationInfo != null ? previousNotPassedPlayerOperationInfo.getPlayerId()
+                            : null); // 上个未pass的玩家的操作信息
+            msg.put("landlordPlayerId", landlordPlayerId); // 地主玩家id
             msg.put("gameMultiplier", gameMultiplier); // 游戏倍率
+            msg.put("basicBean", BASIC_BEAN); // 基础豆子数
             p.getAsyncRemote().sendText(msg.toJSONString());
         });
 
@@ -298,37 +305,38 @@ public class GameRoom {
             previousPlayerOperationInfoVO.setCall(playerOperationInfoDTO.getCall());
             previousPlayerOperationInfoVO.setPlayerId(playerOperationInfoDTO.getPlayerId());
             // 判断是否有地主
-            if (landloadPlayerId != null) {
-                log.info("地主玩家id为：" + landloadPlayerId);
+            if (landlordPlayerId != null) {
+                log.info("地主玩家id为：" + landlordPlayerId);
                 // 有地主了，进入出牌阶段
                 currentRoundType = CURRENT_ROUND_TYPE_2;
                 previousNotPassedPlayerOperationInfo = new PlayerOperationInfo();
-                previousNotPassedPlayerOperationInfo.setPlayerId(landloadPlayerId);
+                previousNotPassedPlayerOperationInfo.setPlayerId(landlordPlayerId);
                 // 为地主加三张牌
-                List<Card> landlordCards = new ArrayList<>(hands.get(players.get(landloadPlayerId)));
+                List<Card> landlordCards = new ArrayList<>(hands.get(players.get(landlordPlayerId)));
                 landlordCards.addAll(publicCards);
                 landlordCards.sort(Comparator.comparingInt(Card::getIndex));// 手牌排序根据牌的index
-                hands.put(players.get(landloadPlayerId), landlordCards);// 放入hands中
+                hands.put(players.get(landlordPlayerId), landlordCards);// 放入hands中
                 gameCallLandlordRuler = null;// 清空叫地主逻辑器
             }
         } else if (currentRoundType.equals(CURRENT_ROUND_TYPE_2)) {
             log.info("出牌阶段");
             // 出牌阶段
             // 处理出牌逻辑,如果无效出牌直接return不反应
-            
+
             // 判断当前玩家pass了但是上个未pass玩家是不是当前玩家.如果是不让pass
             if (playerOperationInfoDTO.getCall() == false
                     && previousNotPassedPlayerOperationInfo.getPlayerId() == playerOperationInfoDTO.getPlayerId())
                 return;
-                    
+            // 如果出牌
             if (playerOperationInfoDTO.getCall() == true) {
-                
+                // 送个handlePlayerPlayCard方法处理出牌逻辑
                 if (!gamePlayCardRuler.handlePlayerPlayCard(this, playerOperationInfoDTO)) {
                     return;
                 }
-
+                // 出完判断手牌空没
                 if (hands.get(currentPlayer).size() == 0) {
                     sendMesToAllPlayers();
+                    // 结算阶段
                     gameOver();
                     return;
                 }
@@ -347,6 +355,9 @@ public class GameRoom {
         if (timerTask != null && !timerTask.isCancelled()) {
             timerTask.cancel(false);
         }
+        log.info("玩家：{},call:{},出牌组合:{},出牌:{}", previousPlayerOperationInfoVO.getPlayerId(),
+                previousPlayerOperationInfoVO.getCall(), previousPlayerOperationInfoVO.getCardCombo(),
+                previousPlayerOperationInfoVO.getCards());
         // 继续下一轮并启动新定时器
         proceedToNextPlayer();
     }
@@ -364,7 +375,7 @@ public class GameRoom {
 
         Long bean = BASIC_BEAN * gameMultiplier;
 
-        if (WinnerId == landloadPlayerId) {
+        if (WinnerId == landlordPlayerId) {
             // 地主获胜
             // 给地主加豆子
             userMapper.updatePlusBeanCount(WinnerUserId, bean * 2);
@@ -375,7 +386,7 @@ public class GameRoom {
             usersId.remove(currentPlayer);
             JSONArray playersJSON = new JSONArray();
             JSONObject winnerJsonObject = new JSONObject();
-            winnerJsonObject.put("playerId", WinnerId);
+            winnerJsonObject.put("playerId", (int) currentPlayer.getUserProperties().get("playerId"));
             winnerJsonObject.put("bean", bean * 2);
             playersJSON.add(winnerJsonObject);
             // 给农民扣除豆子
@@ -386,18 +397,18 @@ public class GameRoom {
                 beanHistoryMapper.insert(new BeanHistory(userId, GameConstant.CHANGE_TYPE_GAME, -(bean), currentBean1,
                         LocalDateTime.now()));
                 JSONObject loserJsonObject = new JSONObject();
-                loserJsonObject.put("playerId", userId);
+                loserJsonObject.put("playerId", (int) player.getUserProperties().get("playerId"));
                 loserJsonObject.put("bean", -(bean));
                 playersJSON.add(loserJsonObject);
             });
             JSONObject msg = new JSONObject();
-            msg.put("type", "info");
+            msg.put("type", "gameOver");
             msg.put("currentRoundType", currentRoundType);
             msg.put("message", "地主获胜");
             msg.put("players", playersJSON);
             players.forEach(p -> {
                 try {
-                    p.getAsyncRemote().sendText(msg.toJSONString());
+                    p.getBasicRemote().sendText(msg.toJSONString());
                     p.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -405,9 +416,9 @@ public class GameRoom {
             });
         } else {
             // 农民获胜
-            Integer loserPlayerId = landloadPlayerId;
-            Long loserUserId = usersId.get(players.get(landloadPlayerId));
-            Session loserSession = players.get(landloadPlayerId);
+            Integer loserPlayerId = landlordPlayerId;
+            Long loserUserId = usersId.get(players.get(landlordPlayerId));
+            Session loserSession = players.get(landlordPlayerId);
             // 给地主扣除豆子
             userMapper.updatePlusBeanCount(loserUserId, -(bean * 2));
             Long currentBean = userMapper.selectBeanCountById(loserUserId);
@@ -431,18 +442,18 @@ public class GameRoom {
                 beanHistoryMapper.insert(new BeanHistory(userId, GameConstant.CHANGE_TYPE_GAME, bean, currentBean1,
                         LocalDateTime.now()));
                 JSONObject winnerJsonObject = new JSONObject();
-                winnerJsonObject.put("playerId", userId);
+                winnerJsonObject.put("playerId", (int) player.getUserProperties().get("playerId"));
                 winnerJsonObject.put("bean", bean);
                 playersJSON.add(winnerJsonObject);
             });
             JSONObject msg = new JSONObject();
-            msg.put("type", "info");
+            msg.put("type", "gameOver");
             msg.put("currentRoundType", currentRoundType);
             msg.put("message", "农民获胜");
             msg.put("players", playersJSON);
             players.forEach(p -> {
                 try {
-                    p.getAsyncRemote().sendText(msg.toJSONString());
+                    p.getBasicRemote().sendText(msg.toJSONString());
                     p.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -492,13 +503,13 @@ class GameCallLandlordRuler {
             gameRoom.setGameMultiplier(gameRoom.getGameMultiplier() * 2);// 有玩家叫地主,游戏倍率翻倍
             // 如果叫牌玩家有两位，则当前玩家为地主
             if (bannedCallers.size() == gameRoom.getPlayers().size() - 1) {
-                gameRoom.setLandloadPlayerId((int) player.getUserProperties().get("playerId"));// 设置地主玩家id
+                gameRoom.setLandlordPlayerId((int) player.getUserProperties().get("playerId"));// 设置地主玩家id
                 return;
             }
 
             // 如果第一个叫地主玩家为自己着，则设置地主玩家id
             if (theFirestCaller == player) {
-                gameRoom.setLandloadPlayerId((int) player.getUserProperties().get("playerId"));// 设置地主玩家id
+                gameRoom.setLandlordPlayerId((int) player.getUserProperties().get("playerId"));// 设置地主玩家id
                 return;
             }
             // 设置第一个叫地主的玩家
@@ -519,7 +530,7 @@ class GameCallLandlordRuler {
             }
             // 当第一个叫牌玩家为当前玩家且不叫地主，设置上个叫牌玩家为地主和当前玩家为地主玩家
             if (theFirestCaller == player) {
-                gameRoom.setLandloadPlayerId((int) thePreviousCaller.getUserProperties().get("playerId"));// 设置地主玩家id
+                gameRoom.setLandlordPlayerId((int) thePreviousCaller.getUserProperties().get("playerId"));// 设置地主玩家id
                 gameRoom.setCurrentPlayer(thePreviousCaller);
                 return;
             }
@@ -527,7 +538,7 @@ class GameCallLandlordRuler {
             if (bannedCallers.size() == gameRoom.getPlayers().size() - 1) {
                 // 有两位玩家不叫地主,判断是否有一位玩家叫了地主,是则设置地主玩家id,否则设置下一位玩家为当前玩家
                 if (thePreviousCaller != null) {
-                    gameRoom.setLandloadPlayerId((int) thePreviousCaller.getUserProperties().get("playerId"));// 设置地主玩家id
+                    gameRoom.setLandlordPlayerId((int) thePreviousCaller.getUserProperties().get("playerId"));// 设置地主玩家id
                     gameRoom.setCurrentPlayer(thePreviousCaller);
                     return;
                 }
@@ -634,13 +645,11 @@ class GamePlayCardRuler {
         if (isBomb(cards))
             return new CardCombo(ComboType.BOMB, cards.get(0).getCardvalue());
 
-
         // 四带牌型判断（在炸弹判断之后）
         CardCombo quadrupletCombo = checkQuadrupletWithCards(cards);
         if (quadrupletCombo != null) {
             return quadrupletCombo;
         }
-
 
         CardCombo tripletWithSingle = checkTripletWithSingle(cards);
         if (tripletWithSingle != null)
@@ -650,12 +659,10 @@ class GamePlayCardRuler {
         if (tripletWithPair != null)
             return tripletWithPair;
 
-
         CardCombo tripletCombo = checkTripletStraight(cards);
         if (tripletCombo != null) {
             return tripletCombo;
         }
-
 
         // 连对判断（需要优先于单顺判断）
         PairStraightType pairStraight = checkPairStraight(cards);
@@ -668,7 +675,6 @@ class GamePlayCardRuler {
         if (straight != null) {
             return new CardCombo(straight.comboType, cards.get(0).getCardvalue());
         }
-
 
         // 常规牌型判断
         switch (cards.size()) {
@@ -691,6 +697,7 @@ class GamePlayCardRuler {
         }
         return null;
     }
+
     // 四带牌型验证
     private CardCombo checkQuadrupletWithCards(List<Card> cards) {
         // 基础校验
@@ -731,7 +738,6 @@ class GamePlayCardRuler {
         }
         return null;
     }
-
 
     // 三顺带单验证（例如：333444+76）
     private CardCombo checkTripletWithSingle(List<Card> cards) {
@@ -863,7 +869,6 @@ class GamePlayCardRuler {
         return countMap.values().stream().allMatch(c -> c == 2);
     }
 
-
     // 三顺验证方法
     private CardCombo checkTripletStraight(List<Card> cards) {
         // 牌数必须为3的倍数且至少6张（2组）
@@ -903,7 +908,6 @@ class GamePlayCardRuler {
             default -> null;
         };
     }
-
 
     // 顺子验证逻辑
     private StraightType checkStraight(List<Card> cards) {
@@ -1012,7 +1016,6 @@ class GamePlayCardRuler {
             this.comboType = comboType;
         }
     }
-
 
     // 更新游戏状态
     private void updateGameState(GameRoom gameRoom, Session player, List<Card> playedCards, CardCombo combo) {

@@ -3,12 +3,18 @@ package com.saltyfish.backend.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.pagehelper.PageInfo;
+import com.saltyfish.backend.constant.DatabaseConstant;
 import com.saltyfish.backend.constant.JwtClaimsConstant;
+import com.saltyfish.backend.constant.MessageConstant;
 import com.saltyfish.backend.pojo.dto.UserDTO;
 import com.saltyfish.backend.pojo.dto.UserLoginDTO;
 import com.saltyfish.backend.pojo.entity.User;
+import com.saltyfish.backend.pojo.vo.BeanHistoryVO;
+import com.saltyfish.backend.pojo.vo.UserInfo;
 import com.saltyfish.backend.pojo.vo.UserLoginVO;
 import com.saltyfish.backend.properties.JwtProperties;
+import com.saltyfish.backend.result.PageResult;
 import com.saltyfish.backend.result.Result;
 import com.saltyfish.backend.service.UserService;
 import com.saltyfish.backend.utils.JwtUtil;
@@ -23,13 +29,16 @@ import java.util.Map;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
+
 
 @Slf4j
 @RestController
-@RequestMapping("/user")
+@RequestMapping("")
 @Tag(name = "用户接口")
 public class userController {
 
@@ -50,9 +59,6 @@ public class userController {
         String token = JwtUtil.createJWT(jwtProperties.getSecretKey(), jwtProperties.getExpiration(), claims);
         // 返回token
         UserLoginVO userLoginVO = UserLoginVO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .account(user.getAccount())
                 .token(token).build();
         return Result.success(userLoginVO);
     }
@@ -71,12 +77,31 @@ public class userController {
 
     }
 
+    @GetMapping("/isAccountExist")
+    @Operation(summary = "检查账号是否存在", description = "检查账号是否存在接口")
+    public Result<Boolean> isAccountExist(@RequestParam String account) {
+        log.info("检查账号是否存在: " + account);
+        boolean exists = userService.isAccountExist(account);
+        // 存在返回true，不存在返回false
+        return Result.success(exists, exists ? MessageConstant.ACCOUNT_EXISTS : MessageConstant.ACCOUNT_NOT_FOUND);
+    }
+
+    @PostMapping("/retrieve")
+    @Operation(summary = "用户密码找回", description = "用户密码找回接口")
+    public Result retrieve(@RequestBody UserDTO userDTO, @RequestParam(required = false) String emailcode) {
+        log.info("用户密码找回: " + userDTO.toString());
+        // 密码找回
+        userService.retrieve(userDTO, emailcode);
+        // 返回成功信息
+        return Result.success(MessageConstant.PASSWORD_RESET_SUCCESS);
+    }
+
     @GetMapping("/applyForEmailcode")
     @Operation(summary = "申请邮箱验证码", description = "申请邮箱验证码接口")
     public Result applyForEmailcode(@RequestParam String email) {
         log.info("申请邮箱验证码: " + email);
         userService.applyForEmailcode(email);
-        return Result.success();
+        return Result.success(DatabaseConstant.EMAILCODE_COUNTDOWN);
     }
 
     @GetMapping("/clockIn")
@@ -87,12 +112,57 @@ public class userController {
         return Result.success("签到成功");
     }
 
-    @GetMapping("/viewBean")
-    @Operation(summary = "查看bean", description = "查看bean接口")
-    public Result<Long> viewBean() {
-        log.info("查看bean");
-        Long beanCount = userService.viewBean();
-        return Result.success(beanCount);
+    @GetMapping("/viewUserInfo")
+    @Operation(summary = "查看用户信息", description = "查看用户信息接口")
+    public Result<UserInfo> viewUserInfo() {
+        log.info("查看用户信息");
+        UserInfo userInfo = userService.viewUserInfo();
+        return Result.success(userInfo);
+    }
+
+    @GetMapping("/pageBeanHistory")
+    @Operation(summary = "分页查看用户豆币历史", description = "分页查看用户豆币历史接口")
+    public Result<PageInfo<BeanHistoryVO>> pageBeanHistory(@RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        log.info("分页查看用户豆币历史: page=" + page + ", pageSize=" + pageSize);
+        PageInfo<BeanHistoryVO> pageResult = userService.pageBeanHistory(page, pageSize);
+        return Result.success(pageResult);
+    }
+
+    @PutMapping("/updateUsername")
+    @Operation(summary = "更新用户名", description = "更新用户名接口")
+    public Result updateUsername(@RequestParam String username) {
+        log.info("更新用户名: " + username);
+        userService.updateUsername(username);
+        return Result.success("用户名更新成功");
+    }
+
+    @PutMapping("/updatePassword")
+    @Operation(summary = "更新密码", description = "更新密码接口")
+    public Result updatePassword(@RequestParam String oldPassword, @RequestParam String newPassword) {
+        log.info("更新密码: " + newPassword);
+        userService.updatePassword(oldPassword, newPassword);
+        return Result.success("密码更新成功");
+    }
+
+    @GetMapping("applyForEmailcodeFrombindingEmail")
+    @Operation(summary = "从绑定的邮箱申请邮箱验证码", description = "从绑定的邮箱申请邮箱验证码接口")
+    public Result applyForEmailcodeFrombindingEmail() {
+        log.info("从绑定的邮箱申请邮箱验证码: ");
+        userService.applyForEmailcodeFrombindingEmail();
+        return Result.success(DatabaseConstant.EMAILCODE_COUNTDOWN);
+    }
+
+    @PutMapping("/updateEmail")
+    @Operation(summary = "更新邮箱", description = "更新邮箱接口")
+    public Result updateEmail(@RequestParam(required = false) String oldCode, @RequestParam String newCode,
+            @RequestParam String newEmail) {
+        log.info("更新邮箱: " + newEmail);
+        if(oldCode == null || oldCode.isEmpty()) {
+            oldCode = "";
+        }
+        userService.updateEmail(oldCode, newCode, newEmail);
+        return Result.success("邮箱更新成功");
     }
 
 }
