@@ -32,7 +32,7 @@ const routes = [
   {
     path: '/ddz',
     name: 'ddz',
-    component: () => import('../views/game/DdzView.vue')
+    component: () => import('../views/game/DDZView.vue')
   }
 ]
 
