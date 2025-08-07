@@ -8,18 +8,138 @@
         title="点击更改头像">
         {{ computedAvatar }}
       </div>
-      <div class="username">{{ userInfo.username }}</div>
+      <div 
+        class="username"
+        @click="usernameDialogVisible = true"
+        title="点击修改用户名">
+        {{ userInfo.username }}
+      </div>
     </div>
-    <div class="top-left-buttons">
+    
+    <!-- 修改用户名对话框 -->
+    <el-dialog
+      v-model="usernameDialogVisible"
+      title="修改用户名"
+      width="30%"
+      :close-on-click-modal="false">
+      <el-form :model="usernameForm" label-width="100px">
+        <el-form-item label="新用户名">
+          <el-input 
+            v-model="usernameForm.username" 
+            placeholder="请输入新用户名" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="usernameDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleUpdateUsername">确认修改</el-button>
+        </span>
+      </template>
+    </el-dialog>
+    <div class="operation-buttons">
       <el-button 
         type="warning" 
-        class="logout-button"
+        class="operation-button logout-button"
         round
         size="large"
         @click="handleLogout">
         退出登录
       </el-button>
+      <el-button 
+        type="primary" 
+        class="operation-button"
+        round
+        size="large"
+        @click="passwordDialogVisible = true">
+        修改密码
+      </el-button>
+      <el-button 
+        type="info" 
+        class="operation-button"
+        round
+        size="large"
+        @click="emailDialogVisible = true">
+        更新邮箱
+      </el-button>
     </div>
+    
+    <!-- 修改密码对话框 -->
+    <el-dialog
+      v-model="passwordDialogVisible"
+      title="修改密码"
+      width="30%"
+      :close-on-click-modal="false">
+      <el-form :model="passwordForm" label-width="100px">
+        <el-form-item label="原密码">
+          <el-input 
+            v-model="passwordForm.oldPassword" 
+            type="password"
+            placeholder="请输入原密码"
+            show-password />
+        </el-form-item>
+        <el-form-item label="新密码">
+          <el-input 
+            v-model="passwordForm.newPassword" 
+            type="password"
+            placeholder="请输入新密码"
+            show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="passwordDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleUpdatePassword">确认修改</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 更新邮箱对话框 -->
+    <el-dialog
+      v-model="emailDialogVisible"
+      title="更新邮箱"
+      width="40%"
+      :close-on-click-modal="false">
+      <el-form :model="emailForm" label-width="120px">
+        <div class="tip-text">如果绑定了邮箱必须申请验证码</div>
+        <el-form-item label="原邮箱验证码">
+          <div class="code-input-group">
+            <el-input 
+              v-model="emailForm.oldCode" 
+              placeholder="原邮箱验证码（选填）" />
+            <el-button 
+              type="primary" 
+              @click="handleRequestOldCode"
+              :disabled="oldCodeCountdown > 0">
+              {{ oldCodeCountdown > 0 ? `${oldCodeCountdown}秒后重试` : '申请验证码' }}
+            </el-button>
+          </div>
+        </el-form-item>
+        <el-form-item label="新邮箱地址">
+          <el-input 
+            v-model="emailForm.newEmail" 
+            placeholder="请输入新邮箱地址" />
+        </el-form-item>
+        <el-form-item label="新邮箱验证码">
+          <div class="code-input-group">
+            <el-input 
+              v-model="emailForm.newCode" 
+              placeholder="请输入新邮箱验证码" />
+            <el-button 
+              type="primary" 
+              @click="handleRequestNewCode"
+              :disabled="newCodeCountdown > 0">
+              {{ newCodeCountdown > 0 ? `${newCodeCountdown}秒后重试` : '申请验证码' }}
+            </el-button>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="emailDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleUpdateEmail">确认更新</el-button>
+        </span>
+      </template>
+    </el-dialog>
     <div class="top-right-buttons">
       <el-button 
         type="danger" 
@@ -67,11 +187,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getViewUserInfo, getClockIn } from '../api/user'
+import { getViewUserInfo, getClockIn, putUpdatePassword, putUpdateEmail, getApplyForEmailcodeFrombindingEmail, getApplyForEmailcode, putUpdateUsername } from '../api/user'
 import PageBeanHistoryView from './HomeViewChildren/PageBeanHistoryView.vue'
 
 const router = useRouter()
@@ -151,6 +271,33 @@ const handleLogout = () => {
   ElMessage.success('已退出登录')
 }
 
+const handleUpdateUsername = async () => {
+  try {
+    const token = store.state.user.token
+    if (!token) {
+      ElMessage.error('请先登录')
+      return
+    }
+
+    if (!usernameForm.value.username.trim()) {
+      ElMessage.warning('用户名不能为空')
+      return
+    }
+    
+    const res = await putUpdateUsername(token, usernameForm.value.username)
+    if (res.data.code === 1) {
+      ElMessage.success(res.data.msg || '用户名更新成功')
+      usernameDialogVisible.value = false
+      usernameForm.value.username = ''
+      await fetchUserInfo() // 刷新用户信息
+    } else {
+      ElMessage.error(res.data.msg || '用户名更新失败')
+    }
+  } catch (error) {
+    ElMessage.error('网络错误')
+  }
+}
+
 const handleAvatarClick = () => {
   ElMessage.info({
     message: '头像更改功能开发中...<br/>等作者学会minIO',
@@ -158,6 +305,144 @@ const handleAvatarClick = () => {
     dangerouslyUseHTMLString: true // 设置为true表示使用HTML字符串
   })
 }
+
+// 用户名更新相关
+const usernameDialogVisible = ref(false)
+const usernameForm = ref({
+  username: ''
+})
+
+// 密码更新相关
+const passwordDialogVisible = ref(false)
+const passwordForm = ref({
+  oldPassword: '',
+  newPassword: ''
+})
+
+const handleUpdatePassword = async () => {
+  try {
+    const token = store.state.user.token
+    if (!token) {
+      ElMessage.error('请先登录')
+      return
+    }
+    
+    const res = await putUpdatePassword(token, passwordForm.value.oldPassword, passwordForm.value.newPassword)
+    if (res.data.code === 1) {
+      ElMessage.success(res.data.msg || '密码更新成功')
+      passwordDialogVisible.value = false
+      passwordForm.value = { oldPassword: '', newPassword: '' }
+    } else {
+      ElMessage.error(res.data.msg || '密码更新失败')
+    }
+  } catch (error) {
+    ElMessage.error('网络错误')
+  }
+}
+
+// 邮箱更新相关
+const emailDialogVisible = ref(false)
+const emailForm = ref({
+  oldCode: '',
+  newCode: '',
+  newEmail: ''
+})
+const oldCodeCountdown = ref(0)
+const newCodeCountdown = ref(0)
+
+const handleRequestOldCode = async () => {
+  try {
+    const token = store.state.user.token
+    if (!token) {
+      ElMessage.error('请先登录')
+      return
+    }
+    
+    const res = await getApplyForEmailcodeFrombindingEmail(token)
+    if (res.data.code === 1) {
+      ElMessage.success(res.data.msg || '验证码已发送到绑定邮箱')
+      oldCodeCountdown.value = res.data.data || 60
+      startOldCodeCountdown()
+    } else {
+      ElMessage.error(res.data.msg || '验证码发送失败')
+    }
+  } catch (error) {
+    ElMessage.error('网络错误')
+  }
+}
+
+const handleRequestNewCode = async () => {
+  if (!emailForm.value.newEmail) {
+    ElMessage.warning('请先输入新邮箱地址')
+    return
+  }
+  
+  try {
+    const res = await getApplyForEmailcode(emailForm.value.newEmail)
+    if (res.data.code === 1) {
+      ElMessage.success(res.data.msg || '验证码已发送到新邮箱')
+      newCodeCountdown.value = res.data.data || 60
+      startNewCodeCountdown()
+    } else {
+      ElMessage.error(res.data.msg || '验证码发送失败')
+    }
+  } catch (error) {
+    ElMessage.error('网络错误')
+  }
+}
+
+// 倒计时处理函数
+const startOldCodeCountdown = () => {
+  const timer = setInterval(() => {
+    if (oldCodeCountdown.value > 0) {
+      oldCodeCountdown.value--
+    } else {
+      clearInterval(timer)
+    }
+  }, 1000)
+}
+
+const startNewCodeCountdown = () => {
+  const timer = setInterval(() => {
+    if (newCodeCountdown.value > 0) {
+      newCodeCountdown.value--
+    } else {
+      clearInterval(timer)
+    }
+  }, 1000)
+}
+
+const handleUpdateEmail = async () => {
+  try {
+    const token = store.state.user.token
+    if (!token) {
+      ElMessage.error('请先登录')
+      return
+    }
+    
+    const res = await putUpdateEmail(token, emailForm.value.oldCode, emailForm.value.newCode, emailForm.value.newEmail)
+    if (res.data.code === 1) {
+      ElMessage.success(res.data.msg || '邮箱更新成功')
+      emailDialogVisible.value = false
+      emailForm.value = { oldCode: '', newCode: '', newEmail: '' }
+      oldCodeCountdown.value = 0
+      newCodeCountdown.value = 0
+    } else {
+      ElMessage.error(res.data.msg || '邮箱更新失败')
+    }
+  } catch (error) {
+    ElMessage.error('网络错误')
+  }
+}
+
+// 监听对话框关闭，清除倒计时
+watch(emailDialogVisible, (newVal) => {
+  if (!newVal) {
+    oldCodeCountdown.value = 0
+    newCodeCountdown.value = 0
+    emailForm.value = { oldCode: '', newCode: '', newEmail: '' }
+  }
+})
 
 onMounted(() => {
   fetchUserInfo()
@@ -204,7 +489,7 @@ onMounted(() => {
   position: relative;
 }
 
-.top-left-buttons {
+.operation-buttons {
   position: fixed;
   top: 40px;
   left: 40px;
@@ -212,6 +497,27 @@ onMounted(() => {
   flex-direction: row;
   gap: 15px;
   z-index: 10;
+}
+
+.operation-button {
+  width: 120px;
+  height: 50px;
+  border-radius: 12px !important;
+  font-size: 16px !important;
+  font-weight: bold !important;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  border: none !important;
+  animation: pulseButton 2s infinite;
+}
+
+.operation-button:hover {
+  transform: scale(1.05) translateY(-2px);
+}
+
+.operation-button:active {
+  transform: scale(0.95) translateY(0);
 }
 
 .top-right-buttons {
@@ -265,17 +571,23 @@ onMounted(() => {
 }
 
 .logout-button {
-  width: 120px;
-  height: 50px;
-  border-radius: 12px !important;
-  font-size: 16px !important;
-  font-weight: bold !important;
   background: linear-gradient(135deg, #e67e22 0%, #d35400 100%) !important;
-  border: none !important;
-  animation: pulseButton 2s infinite;
-  color: white;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
+}
+
+.code-input-group {
+  display: flex;
+  gap: 10px;
+}
+
+.tip-text {
+  color: #909399;
+  font-size: 12px;
+  margin-bottom: 10px;
+  padding-left: 120px;
+}
+
+:deep(.el-dialog__body) {
+  padding-top: 20px;
 }
 
 .avatar {
@@ -320,6 +632,15 @@ onMounted(() => {
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
   font-family: '微软雅黑', 'Microsoft YaHei', sans-serif;
   color: #34495e;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 5px 10px;
+  border-radius: 6px;
+}
+
+.username:hover {
+  background-color: rgba(52, 73, 94, 0.1);
+  transform: translateY(-1px);
 }
 
 .match-button-container {
