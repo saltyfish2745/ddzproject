@@ -2,6 +2,7 @@ package com.saltyfish.backend.controller;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -28,7 +29,7 @@ public class BackendMessageController {
     @GetMapping("/readFile")
     @Operation(summary = "读取动态文件内容")
     public Result readFile() throws IOException {
-        try (InputStreamReader reader = new InputStreamReader(resource.getInputStream())) {
+        try (InputStreamReader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
             String content = FileCopyUtils.copyToString(reader);
             return Result.success(content);
         }
