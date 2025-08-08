@@ -173,7 +173,6 @@ public class GameRoom {
     }
 
     public void gameOverButNotCalled() {
-        GameManager.removeGameRoom(roomId);
         // 取消当前定时任务
         if (timerTask != null && !timerTask.isCancelled()) {
             timerTask.cancel(false);
@@ -191,7 +190,7 @@ public class GameRoom {
             } catch (IOException e) {
             }
         });
-
+        GameManager.removeGameRoom(roomId);
     }
 
     // 通知全部玩家游戏信息
@@ -363,7 +362,6 @@ public class GameRoom {
     }
 
     private void gameOver() {
-        GameManager.removeGameRoom(roomId);
         // 取消当前定时任务
         if (timerTask != null && !timerTask.isCancelled()) {
             timerTask.cancel(false);
@@ -461,6 +459,7 @@ public class GameRoom {
             });
 
         }
+        GameManager.removeGameRoom(roomId);
     }
 
     // 获取下一位玩家session

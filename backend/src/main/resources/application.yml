@@ -39,6 +39,8 @@ spring:
           ssl:
             enable: true
             protocol: TLSv1.2 # linux mail protocol
+  banner:
+    location: classpath:files/banner.txt # 启动banner
 
 # springdoc-openapi项目配置
 springdoc:
