@@ -9,7 +9,7 @@
       <el-card class="login-card">
         <div class="login-header">
           <h2 class="login-title">欢迎来到斗地主</h2>
-          <p class="login-subtitle">准备好成为负债累累了吗</p>
+          <p class="login-subtitle">准备好负债累累了吗</p>
         </div>
         <el-form 
           :model="loginForm" 

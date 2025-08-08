@@ -4,7 +4,7 @@ const Components = require('unplugin-vue-components/webpack')
 
 module.exports = defineConfig({
   transpileDependencies: true,
-  
+  publicPath: './',
   devServer: {
     port: 8081  // 这里将默认端口修改为8081
   }
