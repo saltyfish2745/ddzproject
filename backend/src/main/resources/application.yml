@@ -7,7 +7,7 @@ spring:
       # 控制台输出是否使用ANSI颜色
       enabled: ALWAYS
   profiles:
-    active: dev
+    active: prod
   datasource:
     # 数据库连接信息
     url: ${ddzproject.datasource.url}
