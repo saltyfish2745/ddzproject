@@ -125,6 +125,9 @@ public class GameRoom {
         if (timerTask != null && !timerTask.isCancelled()) {
             timerTask.cancel(false);
         }
+        // 判断是否结算了 以免重复结算
+        if (currentRoundType == CURRENT_ROUND_TYPE_3)
+            return;
         currentRoundType = CURRENT_ROUND_TYPE_3;
         Integer losePlayerId = playersId.get(session);
         Long loseUserId = usersId.get(session);
