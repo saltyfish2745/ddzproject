@@ -23,13 +23,8 @@ struct Login {
         Column({space:10}){
           Text('欢迎来到斗地主').font({size:26,weight:FontWeight.Bold}).fontColor(Color.Red)
           Text('准备好负债累累了吗').font({size:12})
-          TextInput({text:this.account,placeholder:'请输入账号'})
-            .onChange((value)=>{
-            this.account=value
-          })
-          TextInput({text:this.password,placeholder:'请输入密码'}).onChange((value)=>{
-            this.password=value
-          }).type(InputType.Password)
+          TextInput({text:$$this.account,placeholder:'请输入账号'})
+          TextInput({text:$$this.password,placeholder:'请输入密码'}).type(InputType.Password)
           Button('登入').width("100%").type(ButtonType.Normal).borderRadius(5).backgroundColor(0xdc4639)
             .onClick(()=>{
               if (this.account==''||this.password==''){

@@ -33,27 +33,19 @@ struct Register {
               Text('注册新玩家').font({size:26,weight:FontWeight.Bold}).fontColor(Color.Red)
               Text('开启您的游戏之旅').font({size:12})
 
-            TextInput({text:this.username,placeholder:'请输入用户名'})
-              .onChange((value)=>{
-                this.username=value
-              })
-            TextInput({text:this.account,placeholder:'请输入账号'})
-              .onChange((value)=>{
-                this.account=value
-              })
-            TextInput({text:this.password,placeholder:'请输入密码'}).onChange((value)=>{
-              this.password=value
-            }).type(InputType.Password)
-            TextInput({text:this.repeatPassword,placeholder:'请确认密码'}).onChange((value)=>{
-              this.repeatPassword=value
-            }).type(InputType.Password)
-            Row(){
+            TextInput({text:$$this.username,placeholder:'请输入用户名'})
+            TextInput({text:$$this.account,placeholder:'请输入账号'})
+            TextInput({text:$$this.password,placeholder:'请输入密码'}).type(InputType.Password)
+            TextInput({text:$$this.repeatPassword,placeholder:'请确认密码'}).type(InputType.Password)
+            Row({space:3}){
               TextInput({text:this.email,placeholder:'请输入邮箱（可选）'}).onChange((value)=>{
                 if(value=='')
                   this.showCodeInput=false
                 this.email=value
               }).width('70%')
-              Button(this.codeCountdown==0?'获取验证码':this.codeCountdown.toString()).fontSize(12).backgroundColor('#ffd4d4d4').fontColor('#ff5d5c5c')
+              Button(this.codeCountdown==0?'获取验证码':this.codeCountdown.toString())
+                .fontSize(10).type(ButtonType.Normal).border({radius:5})
+                .backgroundColor('#ffd4d4d4').fontColor('#ff5d5c5c').width('30%')
                 .onClick(()=>{
                   if (!RegExp('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$').test(this.email)){
                     this.showToast('邮箱输入错误')
@@ -80,13 +72,11 @@ struct Register {
             }.width('100%')
 
             if(this.showCodeInput){
-              TextInput({text:this.code,placeholder:'请确认验证码'}).onChange((value)=>{
-                this.code=value
-              })
+              TextInput({text:$$this.code,placeholder:'请确认验证码'})
             }
 
             Button('立即注册').width("100%").type(ButtonType.Normal).borderRadius(5).backgroundColor(0xdc4639)
-              .onClick(async ()=>{
+              .onClick(()=>{
                 if (this.account==''||this.password==''||this.username==''){
                   this.showToast('用户名或账号或密码为空',Color.Red)
                   return
@@ -101,7 +91,7 @@ struct Register {
                     return
                   }
                 // PostRegister
-                await postRegister(this.username,this.account,this.password,this.email,this.code).then((data)=>{
+                postRegister(this.username,this.account,this.password,this.email,this.code).then((data)=>{
                   if(data.code==1){
                     this.showToast('注册成功')
                     prefUtil.put('app','token',data.data.token)
@@ -116,7 +106,7 @@ struct Register {
                   console.error('postRegister Tag'+JSON.stringify(e))
                 })
               })
-          }.width(300).height(500).justifyContent(FlexAlign.SpaceEvenly).padding(10)
+          }.width(320).height(450).justifyContent(FlexAlign.SpaceAround).padding(20)
         }.height('100%').scrollBar(BarState.On)
       }
     }.height('100%').width('100%')

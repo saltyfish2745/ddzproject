@@ -12,7 +12,7 @@ interface postLoginData {
   token: string;
 }
 export function postLogin(account:string,password:string){
-  return request.post<string,responseData<postLoginData>>(//指定返回类型postLoginResponse为后续调用方便
+  return request.post<postLoginData,responseData<postLoginData>>(//指定返回类型postLoginResponse为后续调用方便
     '/login',
     {
       account,
@@ -25,7 +25,7 @@ interface getViewUserInfoData {
   beanCount: number;
 }
 export function getViewUserInfo(token:string){
-  return request.get<string,responseData<getViewUserInfoData>>(
+  return request.get<getViewUserInfoData,responseData<getViewUserInfoData>>(
     '/viewUserInfo',
     {
       headers:{
@@ -36,7 +36,7 @@ export function getViewUserInfo(token:string){
 }
 
 export function putUpdatePassword(token:string,oldPassword:string,newPassword:string){
-  return request.put<string,responseData<null>>(
+  return request.put<null,responseData<null>>(
     '/updatePassword',
     {},
     {
@@ -52,7 +52,7 @@ export function putUpdatePassword(token:string,oldPassword:string,newPassword:st
 }
 
 export function getApplyForEmailcodeFrombindingEmail(token:string){
-  return request.get<string,responseData<number>>(
+  return request.get<number,responseData<number>>(
     '/applyForEmailcodeFrombindingEmail',
     {
       headers:{
@@ -63,7 +63,7 @@ export function getApplyForEmailcodeFrombindingEmail(token:string){
 }
 
 export function getApplyForEmailcode(email:string){
-  return request.get<string,responseData<number>>(
+  return request.get<number,responseData<number>>(
     '/applyForEmailcode',
     {
       params:{
@@ -74,7 +74,7 @@ export function getApplyForEmailcode(email:string){
 }
 
 export function putUpdateEmail(token:string,newCode:string,newEmail:string,oldCode?:string){
-  return request.put<string,responseData<null>>(
+  return request.put<null,responseData<null>>(
     '/updateEmail',{},
     {
       params:{
@@ -89,7 +89,7 @@ export function putUpdateEmail(token:string,newCode:string,newEmail:string,oldCo
 }
 
 export function getClockIn(token:string){
-  return request.get<string,responseData<null>>('/clockIn',
+  return request.get<null,responseData<null>>('/clockIn',
     {
       headers:{
         token
@@ -109,7 +109,7 @@ interface getPageBeanHistoryData{
   list:getPageBeanHistoryList[]
 }
 export function getPageBeanHistory(token:string,page:number,pageSize:number){
-  return request.get<string,responseData<getPageBeanHistoryData>>('/pageBeanHistory',
+  return request.get<getPageBeanHistoryData,responseData<getPageBeanHistoryData>>('/pageBeanHistory',
     {
       params:{
         page,
@@ -121,7 +121,7 @@ export function getPageBeanHistory(token:string,page:number,pageSize:number){
 }
 
 export function postRegister(username:string,account:string,password:string,email?:string,emailcode?:string){
-  return request.post<string,responseData<postLoginData>>('/register',
+  return request.post<postLoginData,responseData<postLoginData>>('/register',
     {
       username,
       account,
@@ -130,6 +130,19 @@ export function postRegister(username:string,account:string,password:string,emai
     },{
     params:{
       emailcode:email?emailcode:undefined
+    }
+    })
+}
+
+export function postRetrieve(account:string,password:string,email:string,emailcode:string){
+  return request.post<null,responseData<null>>('/retrieve',
+    {
+      account,
+      email,
+      password
+    },{
+    params:{
+      emailcode
     }
     })
 }

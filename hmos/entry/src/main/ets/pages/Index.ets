@@ -102,7 +102,7 @@ struct Index {
               })
               controller.open()
             })
-        }.padding({left:10})
+        }
         Row({space:10}){
           Button('查询历史记录').buttonExtend('#308BCC',this.buttonScale)
             .onClick(()=>{
@@ -118,8 +118,8 @@ struct Index {
               })
             })
 
-        }.padding({right:10})
-      }.width('100%').padding({top:10,left:10,right:10}).position({y:0}).justifyContent(FlexAlign.SpaceBetween)
+        }
+      }.width('100%').position({y:0}).justifyContent(FlexAlign.SpaceBetween)
 
       Column(){
 
@@ -149,7 +149,7 @@ struct Index {
         .shadow(ShadowStyle.OUTER_DEFAULT_XS).padding(10)
       }
 
-    }.width('100%').height('100%').backgroundColor(Color.White)
+    }.width('100%').height('100%').backgroundColor(Color.White).padding(20)
   }
 }
 
@@ -333,27 +333,42 @@ struct BeanHistory{
     }
   }
 
+  private getStrOnChangeType(changeType:string){
+    switch (changeType){
+      case 'CLOCK_IN':
+        return '签到'
+      case 'GAME':
+        return '游戏'
+      case 'REGISTER':
+        return '注册'
+      default :
+        return '其他'
+    }
+  }
+
   build() {
     Column(){
-      Text('欢乐豆历史记录')
+      Text('欢乐豆历史记录').font({weight:FontWeight.Bold})
       Row(){
-        Text('类型').layoutWeight(1)
-        Text('变动数量').layoutWeight(1)
-        Text('当前数量').layoutWeight(1)
-        Text('时间').layoutWeight(2)
+        Text('类型').layoutWeight(1).textAlign(TextAlign.Center)
+        Text('变动数量').layoutWeight(1).textAlign(TextAlign.Center)
+        Text('当前数量').layoutWeight(1).textAlign(TextAlign.Center)
+        Text('时间').layoutWeight(2).textAlign(TextAlign.Center)
       }.width('100%')
+      Divider().strokeWidth(1).color(Color.Gray)
       List(){
         ForEach(this.beanInfos,(item:getPageBeanHistoryList,index)=>{
           ListItem(){
             Row(){
-              Text(item.changeType).layoutWeight(1)
-              Text(item.changeAmount.toString()).layoutWeight(1).fontColor(item.changeAmount<0?Color.Red:Color.Green)
-              Text(item.currentBean.toString()).layoutWeight(1)
-              Text(item.createTime).layoutWeight(2)
+              Text(this.getStrOnChangeType(item.changeType)).layoutWeight(1).textAlign(TextAlign.Center)
+              Text(item.changeAmount>0?`+${item.changeAmount}`:item.changeAmount.toString()).layoutWeight(1)
+                .textAlign(TextAlign.Center).fontColor(item.changeAmount<0?Color.Red:Color.Green)
+              Text(item.currentBean.toString()).layoutWeight(1).textAlign(TextAlign.Center)
+              Text(item.createTime).layoutWeight(2).textAlign(TextAlign.Center)
             }
-          }.width('100%').height(50).padding({left:30,right:30})
+          }.width('100%').height(50)
         })
-      }.width('100%').height('100%')
+      }.width('100%')
       .divider({
         strokeWidth:1,
         color:Color.Gray,
@@ -362,6 +377,7 @@ struct BeanHistory{
         this.updateBeanInfos()
       })
 
-    }.width('100%').height('100%')
+    }.width('100%').height(270)
   }
+
 }
